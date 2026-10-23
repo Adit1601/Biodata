@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Users</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --bg:#f5f5f7; --surface:#fff; --border:#e0e0e0; --primary:#2563eb; --text:#1a1a1a; --muted:#6b7280; --radius:10px; --shadow:0 2px 8px rgba(0,0,0,0.07); }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .back-btn { font-size: 0.82rem; color: var(--muted); text-decoration: none; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; white-space: nowrap; }
+  .back-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .header h1 { font-size: 1.1rem; font-weight: 700; color: #dc2626; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .nav-link { font-size: 0.82rem; color: var(--muted); text-decoration: none; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; white-space: nowrap; }
+  .nav-link:hover { border-color: var(--primary); color: var(--primary); }
+  .user-badge { font-size: 0.78rem; color: var(--muted); font-weight: 500; padding: 3px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 99px; }
+  .logout-link { font-size: 0.78rem; color: var(--muted); text-decoration: none; padding: 3px 8px; border: 1px solid var(--border); border-radius: 99px; background: var(--bg); }
+  .logout-link:hover { color: #dc2626; border-color: #fca5a5; }
+
+  .page { max-width: 900px; margin: 32px auto; padding: 0 20px 60px; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+  .count-pill { font-size: 0.78rem; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 99px; padding: 2px 10px; }
+
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  thead th { text-align: left; padding: 11px 16px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); background: var(--bg); }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #f8f9fb; }
+  td { padding: 12px 16px; vertical-align: middle; }
+
+  .username-cell { font-weight: 600; }
+  .you-tag { font-size: 0.68rem; color: var(--primary); background: #eff6ff; border-radius: 99px; padding: 1px 7px; margin-left: 6px; font-weight: 500; }
+  .role-tag { font-size: 0.72rem; border-radius: 99px; padding: 2px 9px; font-weight: 600; }
+  .role-admin { background: #fef3c7; color: #b45309; }
+  .role-user  { background: #f3f4f6; color: var(--muted); }
+  .status-tag { font-size: 0.72rem; border-radius: 99px; padding: 2px 9px; font-weight: 600; }
+  .status-active   { background: #dcfce7; color: #16a34a; }
+  .status-inactive { background: #fee2e2; color: #dc2626; }
+
+  .detail-link { font-size: 0.78rem; color: var(--primary); text-decoration: none; padding: 4px 10px; border: 1px solid #bfdbfe; border-radius: 6px; background: #eff6ff; white-space: nowrap; }
+  .detail-link:hover { background: #dbeafe; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a class="back-btn" href="/">&#8592; Back</a>
+  <h1>&#9760; Admin — Users</h1>
+  <div class="header-right">
+    <a class="nav-link" href="/admin/claims">
+      Claims{% if pending_count > 0 %} <span style="background:#dc2626;color:#fff;font-size:0.65rem;font-weight:700;border-radius:99px;padding:1px 6px;">{{ pending_count }}</span>{% endif %}
+    </a>
+    <a class="nav-link" href="/admin/completeness">Completeness</a>
+    <a class="nav-link" href="/admin/fields">&#9881; Fields</a>
+    <a class="nav-link" href="/admin/candidates">Candidates &#8594;</a>
+    <span class="user-badge">{{ current_user.username }}</span>
+    <a class="logout-link" href="/logout">Sign out</a>
+  </div>
+</div>
+
+<div class="page">
+  <div class="section-header">
+    <span class="section-title">All Users</span>
+    <span class="count-pill">{{ users | length }} user{{ 's' if users | length != 1 else '' }}</span>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Profile</th>
+          <th>Joined</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td class="username-cell">
+            {{ u.username }}
+            {% if u.id == current_user.id %}<span class="you-tag">you</span>{% endif %}
+          </td>
+          <td><span class="role-tag role-{{ u.role }}">{{ u.role }}</span></td>
+          <td><span class="status-tag status-{{ 'active' if u.active else 'inactive' }}">{{ 'Active' if u.active else 'Inactive' }}</span></td>
+          <td>{{ u.profile_count }} profile{{ 's' if u.profile_count != 1 else '' }}</td>
+          <td style="color:var(--muted);font-size:0.8rem">{{ u.created_at[:10] }}</td>
+          <td><a class="detail-link" href="/admin/user/{{ u.id }}">Manage &#8250;</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</body>
+</html>

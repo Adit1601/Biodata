@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Merge Profiles</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#f5f5f7; --surface:#fff; --border:#e0e0e0;
+    --primary:#2563eb; --primary-h:#1d4ed8;
+    --text:#1a1a1a; --muted:#6b7280;
+    --radius:10px; --shadow:0 2px 8px rgba(0,0,0,0.07);
+    --green:#16a34a; --red:#dc2626;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ── HEADER ── */
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; box-shadow: 0 1px 4px rgba(0,0,0,0.06); position: sticky; top: 0; z-index: 200; }
+  .back-btn { font-size: 0.82rem; color: var(--muted); text-decoration: none; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; }
+  .back-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .header h1 { font-size: 1.05rem; font-weight: 700; color: #dc2626; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .user-badge { font-size: 0.78rem; color: var(--muted); padding: 3px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 99px; }
+  .logout-link { font-size: 0.78rem; color: var(--muted); text-decoration: none; padding: 3px 8px; border: 1px solid var(--border); border-radius: 99px; background: var(--bg); }
+  .logout-link:hover { color: var(--red); border-color: #fca5a5; }
+
+  /* ── PAGE ── */
+  .page { max-width: 100%; padding: 24px 24px 80px; }
+
+  .intro { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; font-size: 0.84rem; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+  .intro strong { color: var(--text); }
+
+  .error-box { background: #fee2e2; border: 1px solid #fca5a5; color: var(--red); border-radius: 8px; padding: 10px 16px; font-size: 0.83rem; margin-bottom: 16px; }
+
+  /* ── SURVIVOR PICKER ── */
+  .survivor-strip {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px 18px; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  }
+  .survivor-strip label { font-size: 0.8rem; font-weight: 600; color: var(--text); white-space: nowrap; }
+  .survivor-options { display: flex; gap: 10px; flex-wrap: wrap; }
+  .surv-opt { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; cursor: pointer; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; transition: all 0.12s; }
+  .surv-opt:has(input:checked) { background: #eff6ff; border-color: var(--primary); color: var(--primary); font-weight: 600; }
+  .surv-opt input { accent-color: var(--primary); }
+  .surv-note { font-size: 0.75rem; color: var(--muted); }
+
+  /* ── MERGE TABLE ── */
+  .merge-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+  table.merge-table { border-collapse: collapse; width: 100%; font-size: 0.81rem; }
+  table.merge-table thead th {
+    padding: 10px 14px; background: var(--bg); border-bottom: 2px solid var(--border);
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--muted); font-weight: 700; white-space: nowrap;
+    position: sticky; top: 57px; z-index: 10;
+  }
+  table.merge-table thead th.field-col { min-width: 130px; text-align: left; }
+  table.merge-table thead th.cand-col { min-width: 200px; text-align: left; }
+
+  /* candidate header cell */
+  .cand-head { display: flex; flex-direction: column; gap: 4px; }
+  .cand-head-name { font-size: 0.82rem; font-weight: 700; color: var(--text); text-transform: none; letter-spacing: 0; }
+  .cand-head-meta { font-size: 0.7rem; color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; }
+  .cand-thumb { width: 40px; height: 48px; object-fit: cover; border-radius: 5px; border: 1px solid var(--border); display: block; margin-bottom: 4px; }
+  .cand-thumb-ph { width: 40px; height: 48px; border-radius: 5px; border: 1px dashed var(--border); background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--muted); margin-bottom: 4px; }
+
+  table.merge-table tbody tr { border-bottom: 1px solid var(--border); }
+  table.merge-table tbody tr:last-child { border-bottom: none; }
+  table.merge-table tbody tr:hover { background: #fafbff; }
+  table.merge-table td { padding: 9px 14px; vertical-align: middle; }
+  .field-label-cell { font-size: 0.78rem; font-weight: 600; color: var(--text); white-space: nowrap; }
+  .field-key-sub { font-size: 0.67rem; color: var(--muted); font-weight: 400; margin-top: 1px; font-family: monospace; }
+
+  /* value radio cells */
+  .value-cell { vertical-align: middle; }
+  .value-cell label {
+    display: flex; align-items: flex-start; gap: 8px;
+    cursor: pointer; padding: 5px 8px; border-radius: 7px;
+    border: 1px solid transparent; transition: all 0.1s;
+  }
+  .value-cell label:hover { background: #f0f7ff; border-color: #bfdbfe; }
+  .value-cell label:has(input:checked) { background: #eff6ff; border-color: var(--primary); }
+  .value-cell input[type=radio] { accent-color: var(--primary); margin-top: 2px; flex-shrink: 0; }
+  .value-text { font-size: 0.82rem; line-height: 1.4; word-break: break-word; }
+  .value-empty { font-size: 0.78rem; color: #aaa; font-style: italic; }
+
+  /* photo row */
+  .photo-choice { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .photo-choice img { width: 60px; height: 72px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
+  .photo-choice .no-photo { width: 60px; height: 72px; border-radius: 6px; border: 2px dashed var(--border); background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: var(--muted); }
+  .photo-choice span { font-size: 0.7rem; color: var(--muted); }
+
+  .section-header-row td {
+    background: #f8faff; font-size: 0.68rem; text-transform: uppercase;
+    letter-spacing: 0.07em; color: var(--muted); font-weight: 700;
+    padding: 7px 14px; border-bottom: 1px solid var(--border);
+  }
+
+  /* save bar */
+  .save-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--surface); border-top: 2px solid var(--border);
+    padding: 14px 24px; display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.08); z-index: 300;
+  }
+  .btn-save { background: var(--primary); color: #fff; border: none; border-radius: 9px; padding: 10px 32px; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+  .btn-save:hover { background: var(--primary-h); }
+  .btn-cancel { font-size: 0.85rem; color: var(--muted); text-decoration: none; padding: 10px 14px; }
+  .btn-cancel:hover { color: var(--text); }
+  .save-note { font-size: 0.78rem; color: var(--muted); }
+  .danger-note { font-size: 0.75rem; color: var(--red); background: #fff0f0; border: 1px solid #fca5a5; border-radius: 6px; padding: 4px 10px; }
+
+  /* quick-fill bar */
+  .quick-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+  .quick-label { font-size: 0.78rem; color: var(--muted); font-weight: 600; }
+  .quick-btn { font-size: 0.75rem; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 4px 11px; cursor: pointer; color: var(--text); }
+  .quick-btn:hover { border-color: var(--primary); color: var(--primary); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a class="back-btn" href="/admin/candidates">&#8592; Candidates</a>
+  <h1>&#9760; Merge {{ candidates|length }} Profiles</h1>
+  <div class="header-right">
+    <span class="user-badge">{{ current_user.username }}</span>
+    <a class="logout-link" href="/logout">Sign out</a>
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="intro">
+    <strong>How this works:</strong>
+    For each field, select which profile's value to keep in the final merged record.
+    The <strong>survivor profile</strong> (chosen below) keeps its folder stem and ID.
+    All PDFs from every profile are copied into the survivor's folder.
+    The other profiles are <strong>permanently deleted</strong> after the merge.
+  </div>
+
+  {% if error %}
+  <div class="error-box">{{ error }}</div>
+  {% endif %}
+
+  <form method="POST" action="/admin/merge/confirm" id="merge-form">
+    <!-- hidden IDs -->
+    {% for c in candidates %}
+    <input type="hidden" name="ids" value="{{ c.id }}">
+    {% endfor %}
+
+    <!-- ── SURVIVOR PICKER ── -->
+    <div class="survivor-strip">
+      <label>&#127775; Survivor profile (keeps its ID &amp; folder):</label>
+      <div class="survivor-options">
+        {% for c in candidates %}
+        <label class="surv-opt">
+          <input type="radio" name="survivor_id" value="{{ c.id }}"
+                 {% if loop.first %}checked{% endif %}>
+          {{ c.name or '(unnamed)' }}
+          <span style="font-size:0.7rem;color:var(--muted)">#{{ c.id }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      <span class="surv-note">All others will be permanently deleted.</span>
+    </div>
+
+    <!-- ── QUICK-FILL ── -->
+    <div class="quick-bar">
+      <span class="quick-label">Quick fill from:</span>
+      {% for c in candidates %}
+      <button type="button" class="quick-btn" onclick="fillFrom({{ c.id }})">
+        All from: {{ c.name or '#' + c.id|string }}
+      </button>
+      {% endfor %}
+    </div>
+
+    <!-- ── FIELD TABLE ── -->
+    <div class="merge-wrap">
+      <table class="merge-table">
+        <thead>
+          <tr>
+            <th class="field-col">Field</th>
+            {% for c in candidates %}
+            <th class="cand-col">
+              <div class="cand-head">
+                {% if c.photo_url %}
+                  <img class="cand-thumb" src="{{ c.photo_url }}" alt="">
+                {% else %}
+                  <div class="cand-thumb-ph">👤</div>
+                {% endif %}
+                <span class="cand-head-name">{{ c.name or '(unnamed)' }}</span>
+                <span class="cand-head-meta">#{{ c.id }} · {{ c.date_of_birth or '—' }}</span>
+              </div>
+            </th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+
+          {# ── Photo row ── #}
+          <tr class="section-header-row"><td colspan="{{ candidates|length + 1 }}">Photo</td></tr>
+          <tr>
+            <td class="field-label-cell">Photo<div class="field-key-sub">photo</div></td>
+            {% for c in candidates %}
+            <td class="value-cell">
+              <label class="photo-choice" style="flex-direction:column;align-items:center;gap:6px;padding:8px 6px;border-radius:7px;border:1px solid transparent;cursor:pointer;transition:all 0.1s;">
+                <input type="radio" name="photo_from" value="{{ c.id }}" {% if loop.first %}checked{% endif %}>
+                {% if c.photo_url %}
+                  <img src="{{ c.photo_url }}" style="width:60px;height:72px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">
+                  <span style="font-size:0.7rem;color:var(--muted)">{{ c.name or '#' + c.id|string }}</span>
+                {% else %}
+                  <div style="width:60px;height:72px;border-radius:6px;border:2px dashed var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:var(--muted)">👤</div>
+                  <span class="value-empty">No photo</span>
+                {% endif %}
+              </label>
+            </td>
+            {% endfor %}
+          </tr>
+
+          {# ── All other fields ── #}
+          {% set ns = namespace(last_group=None) %}
+          {% for field in registry if field.key != 'photo' %}
+            {% if field.group != ns.last_group %}
+              {% set ns.last_group = field.group %}
+              <tr class="section-header-row"><td colspan="{{ candidates|length + 1 }}">{{ field.group }}</td></tr>
+            {% endif %}
+            <tr>
+              <td class="field-label-cell">
+                {{ field.label }}
+                <div class="field-key-sub">{{ field.key }}</div>
+              </td>
+              {% for c in candidates %}
+              <td class="value-cell">
+                <label>
+                  <input type="radio" name="field_{{ field.key }}" value="{{ c.id }}"
+                         {% if loop.first %}checked{% endif %}
+                         class="field-radio" data-field="{{ field.key }}">
+                  {% set val = c.get(field.key) %}
+                  {% if val %}
+                    <span class="value-text">{{ val }}</span>
+                  {% else %}
+                    <span class="value-empty">— empty —</span>
+                  {% endif %}
+                </label>
+              </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+
+        </tbody>
+      </table>
+    </div>
+
+    <div class="save-bar">
+      <button class="btn-save" type="submit">&#10003; Confirm Merge</button>
+      <a class="btn-cancel" href="/admin/candidates">Cancel</a>
+      <span class="save-note">PDFs from all profiles are kept in the survivor's folder.</span>
+      <span class="danger-note">&#9888; Non-survivor profiles will be permanently deleted.</span>
+    </div>
+
+  </form>
+</div>
+
+<script>
+// Quick-fill: set all field radios to the chosen candidate
+function fillFrom(cid) {
+  document.querySelectorAll('input[type=radio]').forEach(r => {
+    if (r.name.startsWith('field_') || r.name === 'photo_from') {
+      if (r.value == cid) r.checked = true;
+    }
+  });
+}
+</script>
+</body>
+</html>

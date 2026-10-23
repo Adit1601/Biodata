@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — {{ u.username }}</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --bg:#f5f5f7; --surface:#fff; --border:#e0e0e0; --primary:#2563eb; --text:#1a1a1a; --muted:#6b7280; --radius:10px; --shadow:0 2px 8px rgba(0,0,0,0.07); }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .back-btn { font-size: 0.82rem; color: var(--muted); text-decoration: none; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; }
+  .back-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .header h1 { font-size: 1.1rem; font-weight: 700; color: #dc2626; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .user-badge { font-size: 0.78rem; color: var(--muted); font-weight: 500; padding: 3px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 99px; }
+  .logout-link { font-size: 0.78rem; color: var(--muted); text-decoration: none; padding: 3px 8px; border: 1px solid var(--border); border-radius: 99px; background: var(--bg); }
+  .logout-link:hover { color: #dc2626; border-color: #fca5a5; }
+
+  .page { max-width: 720px; margin: 32px auto; padding: 0 20px 60px; display: flex; flex-direction: column; gap: 20px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .card-title { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+  .card-body { padding: 20px; }
+
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; }
+  .info-item {}
+  .info-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 3px; }
+  .info-value { font-size: 0.9rem; font-weight: 500; }
+  .you-tag { font-size: 0.68rem; color: var(--primary); background: #eff6ff; border-radius: 99px; padding: 1px 7px; margin-left: 6px; font-weight: 500; }
+  .role-tag { font-size: 0.72rem; border-radius: 99px; padding: 2px 9px; font-weight: 600; }
+  .role-admin { background: #fef3c7; color: #b45309; }
+  .role-user  { background: #f3f4f6; color: var(--muted); }
+  .status-active   { font-size: 0.72rem; border-radius: 99px; padding: 2px 9px; font-weight: 600; background: #dcfce7; color: #16a34a; }
+  .status-inactive { font-size: 0.72rem; border-radius: 99px; padding: 2px 9px; font-weight: 600; background: #fee2e2; color: #dc2626; }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; padding: 16px 20px; border-top: 1px solid var(--border); }
+  .btn { font-size: 0.82rem; font-weight: 500; border-radius: 8px; padding: 7px 16px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; transition: all 0.12s; }
+  .btn:hover { border-color: var(--primary); color: var(--primary); }
+  .btn-danger { color: #dc2626; border-color: #fca5a5; background: #fff0f0; }
+  .btn-danger:hover { background: #fee2e2; border-color: #dc2626; }
+  .btn-warning { color: #b45309; border-color: #fcd34d; background: #fffbeb; }
+  .btn-warning:hover { background: #fef3c7; border-color: #b45309; }
+  .btn-success { color: #16a34a; border-color: #86efac; background: #f0fdf4; }
+  .btn-success:hover { background: #dcfce7; border-color: #16a34a; }
+
+  .profile-photo { width: 80px; height: 96px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
+  .profile-photo-placeholder { width: 80px; height: 96px; border-radius: 8px; border: 2px dashed var(--border); background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; color: var(--muted); }
+  .profile-hero { display: flex; gap: 16px; align-items: flex-start; }
+  .profile-hero-body { flex: 1; }
+  .profile-name { font-size: 1rem; font-weight: 700; margin-bottom: 3px; }
+  .profile-sub { font-size: 0.82rem; color: var(--muted); }
+  .edit-profile-link { display: inline-block; margin-top: 10px; font-size: 0.8rem; color: var(--primary); text-decoration: none; padding: 4px 12px; border: 1px solid #bfdbfe; border-radius: 6px; background: #eff6ff; }
+  .edit-profile-link:hover { background: #dbeafe; }
+  .no-profile { color: var(--muted); font-size: 0.85rem; font-style: italic; }
+
+  .confirm-delete { display: none; margin-top: 12px; padding: 14px; background: #fff0f0; border: 1px solid #fca5a5; border-radius: 8px; font-size: 0.85rem; }
+  .confirm-delete p { margin-bottom: 12px; color: #dc2626; font-weight: 500; }
+  .confirm-delete .confirm-actions { display: flex; gap: 8px; }
+
+  .disabled-note { font-size: 0.78rem; color: var(--muted); font-style: italic; }
+
+  .pw-form { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; padding: 16px 20px; border-top: 1px solid var(--border); }
+  .pw-form label { font-size: 0.78rem; font-weight: 500; color: var(--muted); display: block; margin-bottom: 5px; }
+  .pw-form input[type="password"] { padding: 7px 11px; border: 1px solid var(--border); border-radius: 7px; font-size: 0.88rem; width: 220px; outline: none; background: var(--bg); color: var(--text); transition: border-color 0.15s; }
+  .pw-form input[type="password"]:focus { border-color: var(--primary); background: #fff; }
+  .pw-hint { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+  .flash-ok  { font-size: 0.8rem; color: #16a34a; background: #dcfce7; border: 1px solid #86efac; border-radius: 6px; padding: 6px 12px; }
+  .flash-err { font-size: 0.8rem; color: #dc2626; background: #fee2e2; border: 1px solid #fca5a5; border-radius: 6px; padding: 6px 12px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a class="back-btn" href="/admin">&#8592; All Users</a>
+  <h1>&#9760; User: {{ u.username }}</h1>
+  <div class="header-right">
+    <span class="user-badge">{{ current_user.username }}</span>
+    <a class="logout-link" href="/logout">Sign out</a>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- Account info -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">Account</span></div>
+    <div class="card-body">
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-label">Username</div>
+          <div class="info-value">{{ u.username }}{% if u.id == current_user.id %}<span class="you-tag">you</span>{% endif %}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">User ID</div>
+          <div class="info-value">#{{ u.id }}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Role</div>
+          <div class="info-value"><span class="role-tag role-{{ u.role }}">{{ u.role }}</span></div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Status</div>
+          <div class="info-value"><span class="status-{{ 'active' if u.active else 'inactive' }}">{{ 'Active' if u.active else 'Inactive' }}</span></div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Joined</div>
+          <div class="info-value">{{ u.created_at[:10] }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="actions">
+      <!-- Toggle active -->
+      {% if u.id != current_user.id %}
+      <form method="POST">
+        <input type="hidden" name="action" value="toggle_active">
+        {% if u.active %}
+          <button class="btn btn-warning" type="submit"
+            onclick="return confirm('Deactivate {{ u.username }}? They will be unable to log in.')">
+            &#128683; Deactivate
+          </button>
+        {% else %}
+          <button class="btn btn-success" type="submit">&#10003; Reactivate</button>
+        {% endif %}
+      </form>
+      {% else %}
+      <span class="disabled-note">Cannot deactivate your own account</span>
+      {% endif %}
+
+      <!-- Toggle role -->
+      {% if u.id != current_user.id %}
+      <form method="POST">
+        <input type="hidden" name="action" value="toggle_role">
+        {% if u.role == 'user' %}
+          <button class="btn" type="submit"
+            onclick="return confirm('Promote {{ u.username }} to admin?')">
+            &#8679; Make Admin
+          </button>
+        {% else %}
+          <button class="btn btn-warning" type="submit"
+            onclick="return confirm('Remove admin role from {{ u.username }}?')">
+            &#8681; Remove Admin
+          </button>
+        {% endif %}
+      </form>
+      {% endif %}
+
+      <!-- Delete -->
+      {% if u.id != current_user.id %}
+      <button class="btn btn-danger" onclick="document.getElementById('confirm-delete').style.display='block';this.style.display='none'">
+        &#128465; Delete User
+      </button>
+      {% else %}
+      <span class="disabled-note">Cannot delete your own account</span>
+      {% endif %}
+    </div>
+
+    {% if u.id != current_user.id %}
+    <div class="confirm-delete" id="confirm-delete">
+      <p>&#9888; This will permanently delete the user account and their profile. This cannot be undone.</p>
+      <div class="confirm-actions">
+        <form method="POST">
+          <input type="hidden" name="action" value="delete_user">
+          <button class="btn btn-danger" type="submit">Yes, delete permanently</button>
+        </form>
+        <button class="btn" onclick="document.getElementById('confirm-delete').style.display='none';document.querySelector('.btn-danger').style.display=''">
+          Cancel
+        </button>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Reset Password -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">Reset Password</span></div>
+    <div class="card-body" style="padding-bottom:0;">
+      <p style="font-size:0.84rem;color:var(--muted);">
+        Set a new password for <strong>{{ u.username }}</strong> and share it with them directly.
+      </p>
+      {% if pw_message %}
+        <div class="flash-ok" style="margin-top:10px;">{{ pw_message }}</div>
+      {% endif %}
+      {% if pw_error %}
+        <div class="flash-err" style="margin-top:10px;">{{ pw_error }}</div>
+      {% endif %}
+    </div>
+    <form method="POST" class="pw-form">
+      <input type="hidden" name="action" value="reset_password">
+      <div>
+        <label for="new_password">New password</label>
+        <input type="password" id="new_password" name="new_password"
+               minlength="8" placeholder="Min. 8 characters" required autocomplete="new-password">
+        <div class="pw-hint">Minimum 8 characters</div>
+      </div>
+      <div>
+        <label for="confirm_password">Confirm password</label>
+        <input type="password" id="confirm_password" name="confirm_password"
+               minlength="8" placeholder="Repeat password" required autocomplete="new-password">
+      </div>
+      <div style="padding-bottom:4px;">
+        <button class="btn btn-success" type="submit">&#128273; Set Password</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Profile -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">Biodata Profile</span></div>
+    <div class="card-body">
+      {% if candidate %}
+      <div class="profile-hero">
+        <div>
+          {% if candidate.photo_url %}
+            <img class="profile-photo" src="{{ candidate.photo_url }}" alt="">
+          {% else %}
+            <div class="profile-photo-placeholder">👤</div>
+          {% endif %}
+        </div>
+        <div class="profile-hero-body">
+          <div class="profile-name">{{ candidate.name or '—' }}</div>
+          <div class="profile-sub">
+            {{ candidate.date_of_birth or '' }}
+            {% if candidate.age %} · {{ candidate.age }} yrs{% endif %}
+            {% if candidate.residential_city %} · {{ candidate.residential_city }}{% endif %}
+          </div>
+          <a class="edit-profile-link" href="/admin/candidate/{{ candidate.id }}/edit">
+            &#9998; Edit profile
+          </a>
+        </div>
+      </div>
+      {% else %}
+      <div class="no-profile">This user hasn't created a profile yet.</div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

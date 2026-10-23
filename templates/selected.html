@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ view.name }} — Biodata</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:        #f5f5f7;
+    --surface:   #ffffff;
+    --border:    #e0e0e0;
+    --primary:   #2563eb;
+    --primary-h: #1d4ed8;
+    --text:      #1a1a1a;
+    --muted:     #6b7280;
+    --chip-bg:   #e8edf7;
+    --chip-text: #2563eb;
+    --sel-bg:    #eff6ff;
+    --radius:    12px;
+    --shadow:    0 2px 8px rgba(0,0,0,0.08);
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .back-btn {
+    font-size: 0.82rem;
+    color: var(--muted);
+    text-decoration: none;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .back-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+  .view-title-wrap { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+  .view-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    padding-bottom: 1px;
+    transition: border-color 0.15s;
+    max-width: 300px;
+  }
+  .view-title:hover { border-color: var(--primary); color: var(--primary); }
+  .view-title-input {
+    font-size: 1.1rem;
+    font-weight: 700;
+    border: 2px solid var(--primary);
+    border-radius: 7px;
+    padding: 2px 8px;
+    outline: none;
+    background: var(--sel-bg);
+    max-width: 300px;
+  }
+  .count-badge {
+    font-size: 0.8rem;
+    color: var(--muted);
+    background: var(--bg);
+    padding: 4px 11px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .filter-desc {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-style: italic;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 260px;
+  }
+
+  .header-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .user-badge { font-size: 0.78rem; color: var(--muted); font-weight: 500; padding: 3px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 99px; }
+  .settings-link { font-size: 0.78rem; color: var(--muted); text-decoration: none; padding: 3px 8px; border: 1px solid var(--border); border-radius: 99px; background: var(--bg); transition: color 0.12s; }
+  .settings-link:hover { color: var(--primary); border-color: var(--primary); }
+  .logout-link { font-size: 0.78rem; color: var(--muted); text-decoration: none; padding: 3px 8px; border: 1px solid var(--border); border-radius: 99px; background: var(--bg); transition: color 0.12s; }
+  .logout-link:hover { color: #dc2626; border-color: #fca5a5; }
+  .btn-delete-view {
+    font-size: 0.8rem;
+    color: #dc2626;
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.12s;
+  }
+  .btn-delete-view:hover { background: #fecaca; }
+
+  /* ── GRID (same as index) ── */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; padding: 20px; }
+
+  /* ── CARD ── */
+  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: visible; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; border: 2px solid transparent; position: relative; }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
+  .card-inner { border-radius: 10px; overflow: hidden; }
+  .card-photo { width: 100%; aspect-ratio: 3/4; object-fit: cover; object-position: top center; display: block; background: #e8edf7; }
+  .card-photo-placeholder { width: 100%; aspect-ratio: 3/4; background: linear-gradient(135deg, #e8edf7, #d1daf0); display: flex; align-items: center; justify-content: center; font-size: 2.8rem; color: #9db4d8; }
+  .card-body { padding: 9px 9px 6px; }
+  .card-name { font-size: 0.86rem; font-weight: 700; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-meta { font-size: 0.72rem; color: var(--muted); margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-labels { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 5px; }
+  .label-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 0.62rem; font-weight: 600; padding: 2px 6px 2px 5px; border-radius: 999px; color: #fff; white-space: nowrap; max-width: 90px; overflow: hidden; }
+  .label-chip-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.7); flex-shrink: 0; }
+  .label-chip-name { overflow: hidden; text-overflow: ellipsis; }
+  .label-chip-remove { font-size: 0.6rem; cursor: pointer; opacity: 0.75; margin-left: 1px; flex-shrink: 0; padding: 0 1px; line-height: 1; }
+  .label-chip-remove:hover { opacity: 1; }
+
+  .card-label-wrap { position: relative; display: inline-block; }
+  .btn-add-label { font-size: 0.65rem; color: var(--muted); background: var(--bg); border: 1px dashed var(--border); border-radius: 999px; padding: 2px 8px; cursor: pointer; white-space: nowrap; }
+  .btn-add-label:hover { border-color: var(--primary); color: var(--primary); }
+  .label-dropdown { display: none; position: absolute; bottom: calc(100% + 4px); left: 0; min-width: 180px; max-height: 280px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 20px rgba(0,0,0,0.14); z-index: 500; flex-direction: column; }
+  .label-dropdown.open { display: flex; }
+  .label-dropdown-list { overflow-y: auto; flex: 1; min-height: 0; }
+  .label-dropdown-empty { padding: 10px 12px; font-size: 0.78rem; color: var(--muted); }
+  .label-dropdown-item { display: flex; align-items: center; gap: 8px; padding: 7px 12px; cursor: pointer; font-size: 0.8rem; transition: background 0.1s; }
+  .label-dropdown-item:hover { background: var(--bg); }
+  .label-dropdown-item.already-on { opacity: 0.4; cursor: default; }
+  .label-dropdown-item-row { display: flex; align-items: center; width: 100%; }
+  .label-dropdown-item-row .label-item-main { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; cursor: pointer; }
+  .label-dropdown-item-row .label-item-del {
+    flex-shrink: 0; width: 20px; height: 20px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--muted); font-size: 0.7rem;
+    opacity: 0; transition: opacity 0.12s, background 0.12s;
+  }
+  .label-dropdown-item:hover .label-item-del { opacity: 1; }
+  .label-dropdown-item-row .label-item-del:hover { background: #fee2e2; color: #dc2626; }
+  /* ── Delete confirm popup ── */
+  .ldel-confirm { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); backdrop-filter: blur(2px); }
+  .ldel-confirm-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px 24px; width: 300px; max-width: 90vw; box-shadow: 0 16px 40px rgba(0,0,0,0.18); }
+  .ldel-confirm-box h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; }
+  .ldel-confirm-box p  { font-size: 0.82rem; color: var(--muted); margin-bottom: 18px; line-height: 1.4; }
+  .ldel-confirm-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .ldel-btn-cancel { font-size: 0.82rem; padding: 7px 14px; border: 1px solid var(--border); border-radius: 8px; background: transparent; cursor: pointer; color: var(--muted); }
+  .ldel-btn-cancel:hover { background: var(--bg); }
+  .ldel-btn-delete { font-size: 0.82rem; font-weight: 700; padding: 7px 14px; border: none; border-radius: 8px; background: #ef4444; color: #fff; cursor: pointer; }
+  .ldel-btn-delete:hover { background: #dc2626; }
+  .label-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .label-dropdown-footer { border-top: 1px solid var(--border); flex-shrink: 0; }
+  .label-new-trigger { display: flex; align-items: center; gap: 6px; padding: 7px 12px; cursor: pointer; font-size: 0.78rem; color: var(--primary); transition: background 0.1s; }
+  .label-new-trigger:hover { background: var(--bg); }
+  .label-new-form { display: none; padding: 8px 10px; flex-direction: column; gap: 6px; }
+  .label-new-form.open { display: flex; }
+  .label-new-input { font-size: 0.8rem; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); outline: none; width: 100%; }
+  .label-new-input:focus { border-color: var(--primary); }
+  .label-new-swatches { display: flex; gap: 5px; flex-wrap: wrap; }
+  .label-new-swatch { width: 18px; height: 18px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color 0.1s, transform 0.1s; flex-shrink: 0; }
+  .label-new-swatch:hover { transform: scale(1.15); }
+  .label-new-swatch.selected { border-color: var(--text); }
+  .label-new-actions { display: flex; gap: 5px; }
+  .label-new-create { flex: 1; font-size: 0.75rem; font-weight: 700; padding: 4px 0; border: none; border-radius: 6px; background: var(--primary); color: #fff; cursor: pointer; transition: opacity 0.1s; }
+  .label-new-create:hover { opacity: 0.88; }
+  .label-new-cancel { font-size: 0.75rem; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer; }
+
+  .card-actions { display: flex; align-items: center; justify-content: space-between; padding: 0 9px 9px; gap: 6px; }
+  .btn-pdf { font-size: 0.68rem; color: var(--primary); text-decoration: none; background: var(--chip-bg); padding: 3px 8px; border-radius: 5px; font-weight: 600; transition: background 0.12s; white-space: nowrap; }
+  .btn-pdf:hover { background: var(--primary); color: #fff; }
+  .btn-pdf-disabled { font-size: 0.68rem; color: var(--muted); background: var(--bg); padding: 3px 8px; border-radius: 5px; }
+  .btn-remove-from-view { font-size: 0.65rem; color: #dc2626; background: #fee2e2; border: 1px solid #fca5a5; border-radius: 5px; padding: 2px 7px; cursor: pointer; white-space: nowrap; transition: background 0.12s; }
+  .btn-remove-from-view:hover { background: #fecaca; }
+  .btn-upload-photo { font-size: 0.68rem; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 3px 7px; cursor: pointer; transition: all 0.12s; white-space: nowrap; margin-left: auto; }
+  .btn-upload-photo:hover { border-color: var(--primary); color: var(--primary); background: var(--sel-bg); }
+  .btn-upload-photo.uploading { opacity: 0.6; pointer-events: none; }
+
+  .gender-chip { display: inline-block; font-size: 0.62rem; font-weight: 600; padding: 1px 6px; border-radius: 999px; margin-right: 3px; color: #fff; }
+  .gender-chip.female { background: #ec4899; }
+  .gender-chip.male   { background: #3b82f6; }
+
+  /* ── EMPTY / LOADING ── */
+  .empty { grid-column: 1/-1; text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+  .sentinel { height: 40px; display: flex; align-items: center; justify-content: center; }
+  .loading-spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── DETAIL PANEL ── */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; backdrop-filter: blur(2px); }
+  .overlay.open { display: block; }
+  .panel { position: fixed; bottom: 0; left: 0; right: 0; max-height: 82vh; background: var(--surface); border-radius: 20px 20px 0 0; z-index: 201; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1); overflow-y: auto; padding: 0 0 32px; }
+  .panel.open { transform: translateY(0); }
+  .panel-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 0; }
+  .panel-header { display: flex; align-items: flex-start; gap: 14px; padding: 14px 18px 12px; border-bottom: 1px solid var(--border); }
+  .panel-photo { width: 76px; height: 101px; object-fit: cover; object-position: top; border-radius: 8px; flex-shrink: 0; background: var(--chip-bg); }
+  .panel-photo-ph { width: 76px; height: 101px; border-radius: 8px; background: linear-gradient(135deg, #e8edf7, #d1daf0); display: flex; align-items: center; justify-content: center; font-size: 2.2rem; flex-shrink: 0; }
+  .panel-title h2 { font-size: 1.08rem; font-weight: 700; margin-bottom: 3px; }
+  .panel-title .meta { font-size: 0.8rem; color: var(--muted); line-height: 1.7; }
+  .panel-close { margin-left: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 50%; width: 30px; height: 30px; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .panel-close:hover { background: var(--border); }
+  /* Panel ATV (add-to-view) popup */
+  .panel-atv-wrap { display: inline-flex; margin-top: 8px; }
+  .panel-atv-btn { font-size: 0.75rem; font-weight: 500; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.12s; }
+  .panel-atv-btn:hover { border-color: var(--primary); color: var(--primary); background: #eff6ff; }
+  /* Popup is fixed to viewport to escape panel overflow clipping */
+  .panel-atv-popup { display: none; position: fixed; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.13); min-width: 210px; z-index: 9999; overflow: hidden; }
+  .panel-atv-popup.open { display: block; }
+  .panel-atv-header { font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); padding: 8px 12px 4px; }
+  .panel-atv-item { padding: 8px 12px; font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; transition: background 0.1s; }
+  .panel-atv-item:hover { background: #eff6ff; }
+  .panel-atv-item.already { color: var(--muted); cursor: default; }
+  .panel-atv-item.already:hover { background: transparent; }
+  .panel-atv-badge { font-size: 0.67rem; font-weight: 700; padding: 1px 7px; border-radius: 99px; white-space: nowrap; }
+  .panel-atv-badge.in { background: #dcfce7; color: #16a34a; }
+  .panel-atv-badge.notIn { background: #eff6ff; color: var(--primary); }
+  .panel-atv-empty { padding: 10px 12px; font-size: 0.82rem; color: var(--muted); font-style: italic; }
+  .panel-body { padding: 14px 18px; }
+  .panel-section { margin-bottom: 14px; }
+  .panel-section-title { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 8px; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
+  .detail-item { font-size: 0.82rem; line-height: 1.5; }
+  .detail-label { color: var(--muted); font-size: 0.7rem; margin-bottom: 1px; }
+  .detail-value { font-weight: 500; }
+  .detail-value.nm { color: var(--muted); font-weight: 400; font-style: italic; }
+  .panel-pdf-btn { display: inline-block; margin-top: 6px; padding: 8px 20px; background: var(--primary); color: #fff; border-radius: 8px; font-size: 0.82rem; font-weight: 600; text-decoration: none; }
+  .panel-pdf-btn:hover { background: var(--primary-h); }
+
+  /* ── TOAST ── */
+  .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px); background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 10px; font-size: 0.84rem; font-weight: 500; opacity: 0; transition: opacity 0.2s, transform 0.2s; z-index: 700; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<div class="header">
+  <a class="back-btn" href="/">&#8592; All Candidates</a>
+
+  <div class="view-title-wrap">
+    <span class="view-title" id="view-title" title="Click to rename" onclick="startRename()">{{ view.name }}</span>
+    {% if view.filter_desc %}
+    <span class="filter-desc" title="{{ view.filter_desc }}">{{ view.filter_desc }}</span>
+    {% endif %}
+  </div>
+
+  <span class="count-badge" id="count-badge">{{ view.count }} candidates</span>
+
+  <div class="header-actions">
+    {% if current_user.is_admin %}<a class="settings-link" href="/admin" style="color:#dc2626">&#9760; Admin</a>{% endif %}
+    <a class="settings-link" href="/profile/me">&#128100; My Profile</a>
+    <span class="user-badge">{{ current_user.username }}</span>
+    <a class="logout-link" href="/logout">Sign out</a>
+    <button class="btn-delete-view" onclick="deleteView()">&#128465; Delete View</button>
+  </div>
+</div>
+
+<!-- ── GRID ── -->
+<div class="grid" id="grid"></div>
+<div id="sentinel" style="height:1px;margin-top:-1px;"></div>
+
+<!-- ── DETAIL PANEL ── -->
+<div class="overlay" id="overlay" onclick="closePanel()"></div>
+<div class="panel" id="panel">
+  <div class="panel-handle"></div>
+  <div class="panel-header" id="panel-header"></div>
+  <div class="panel-body" id="panel-body"></div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+const VIEW_ID    = {{ view.id }};
+const ALL_LABELS = {{ labels | tojson }};
+const ALL_VIEWS  = {{ all_views | tojson }};
+
+let offset   = 0;
+const LIMIT  = 50;
+let   total  = {{ view.count }};
+let   loading = false;
+let   noMore  = false;
+const cardData = new Map();
+let   panelCid = null;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Rename view (inline)
+// ═══════════════════════════════════════════════════════════════════════════
+function startRename() {
+  const span  = document.getElementById('view-title');
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'view-title-input';
+  input.value = span.textContent.trim();
+  span.replaceWith(input);
+  input.focus(); input.select();
+
+  async function commit() {
+    const name = input.value.trim();
+    if (name) {
+      try {
+        await fetch('/api/views/' + VIEW_ID, {
+          method: 'PUT',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({name}),
+        });
+        document.title = name + ' — Biodata';
+        const newSpan = document.createElement('span');
+        newSpan.id = 'view-title'; newSpan.className = 'view-title';
+        newSpan.title = 'Click to rename'; newSpan.onclick = startRename;
+        newSpan.textContent = name;
+        input.replaceWith(newSpan);
+        showToast('View renamed');
+      } catch(err) {}
+    } else {
+      const newSpan = document.createElement('span');
+      newSpan.id = 'view-title'; newSpan.className = 'view-title';
+      newSpan.title = 'Click to rename'; newSpan.onclick = startRename;
+      newSpan.textContent = input.defaultValue;
+      input.replaceWith(newSpan);
+    }
+  }
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') {
+      const span2 = document.createElement('span');
+      span2.id = 'view-title'; span2.className = 'view-title';
+      span2.title = 'Click to rename'; span2.onclick = startRename;
+      span2.textContent = input.defaultValue;
+      input.replaceWith(span2);
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Delete view
+// ═══════════════════════════════════════════════════════════════════════════
+async function deleteView() {
+  if (!confirm('Delete this saved view? Candidates will not be deleted.')) return;
+  try {
+    await fetch('/api/views/' + VIEW_ID, { method: 'DELETE' });
+    window.location.href = '/';
+  } catch(err) { showToast('Error deleting view'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Card rendering
+// ═══════════════════════════════════════════════════════════════════════════
+function renderCard(c) {
+  cardData.set(c.id, c);
+
+  const photoHtml = c.photo_url
+    ? `<img class="card-photo" src="${c.photo_url}" alt="${esc(c.name)}" loading="lazy">`
+    : `<div class="card-photo-placeholder">&#128105;</div>`;
+
+  const genderChip = c.gender && c.gender !== 'Not Mentioned'
+    ? `<span class="gender-chip ${c.gender.toLowerCase() === 'female' ? 'female' : 'male'}">${esc(c.gender)}</span>`
+    : '';
+
+  const meta = [
+    c.birth_year,
+    c.age ? c.age + ' yrs' : null,
+    c.height && c.height !== 'Not Mentioned' ? c.height : null,
+  ].filter(Boolean).join(' · ');
+
+  const labelChips = (c.labels || []).map(l => `
+    <span class="label-chip" style="background:${esc(l.color)}" data-label-id="${l.id}">
+      <span class="label-chip-dot"></span>
+      <span class="label-chip-name" title="${esc(l.name)}">${esc(l.name)}</span>
+      <span class="label-chip-remove" onclick="removeLabel(event,${c.id},${l.id})" title="Remove">&#10005;</span>
+    </span>`).join('');
+
+  const existingIds = new Set((c.labels || []).map(l => l.id));
+  const dropItems = ALL_LABELS.length
+    ? ALL_LABELS.map(l => `
+        <div class="label-dropdown-item${existingIds.has(l.id) ? ' already-on' : ''}"
+             data-label-id="${l.id}">
+          <div class="label-dropdown-item-row">
+            <div class="label-item-main" onclick="addLabel(event,${c.id},${l.id},this.closest('.label-dropdown-item'))">
+              <span class="label-dot" style="background:${esc(l.color)}"></span>
+              ${esc(l.name)}
+            </div>
+            <div class="label-item-del" onclick="confirmDeleteLabel(event,${l.id},'${esc(l.name)}')" title="Delete label">&#10005;</div>
+          </div>
+        </div>`).join('')
+    : `<div class="label-dropdown-empty">No labels yet</div>`;
+
+  const dropdownHtml = `
+    <div class="label-dropdown-list">${dropItems}</div>
+    <div class="label-dropdown-footer">
+      <div class="label-new-trigger" onclick="toggleNewLabelForm(event,'ldrop-${c.id}')">
+        <span style="font-size:1rem;line-height:1">＋</span> New label
+      </div>
+      <div class="label-new-form" id="lnew-${c.id}">
+        <input class="label-new-input" type="text" placeholder="Label name…"
+               id="lnew-name-${c.id}" maxlength="40"
+               onkeydown="if(event.key==='Enter'){createInlineLabel(event,${c.id})}
+                          else if(event.key==='Escape'){cancelNewLabelForm(event,'ldrop-${c.id}')}">
+        <div class="label-new-swatches" id="lnew-swatches-${c.id}"></div>
+        <div class="label-new-actions">
+          <button class="label-new-create" onclick="createInlineLabel(event,${c.id})">Create</button>
+          <button class="label-new-cancel" onclick="cancelNewLabelForm(event,'ldrop-${c.id}')">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+
+  const pdfBtn = c.pdf_url
+    ? `<a class="btn-pdf" href="${c.pdf_url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">&#128196; PDF</a>`
+    : `<span class="btn-pdf-disabled">No PDF</span>`;
+
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.id = 'card-' + c.id;
+  el.dataset.id = c.id;
+  el.innerHTML = `
+    <div class="card-inner">
+      ${photoHtml}
+      <div class="card-body">
+        <div class="card-name" title="${esc(c.name)}">${esc(c.name)}</div>
+        <div class="card-meta">${genderChip}${esc(meta)}</div>
+        <div class="card-labels" id="clabels-${c.id}">${labelChips}</div>
+        <div class="card-label-wrap">
+          <button class="btn-add-label" onclick="toggleLabelDropdown(event,${c.id})">+ Label</button>
+          <div class="label-dropdown" id="ldrop-${c.id}">${dropdownHtml}</div>
+        </div>
+      </div>
+      <div class="card-actions">
+        ${pdfBtn}
+        <button class="btn-remove-from-view" onclick="removeFromView(event,${c.id})">&#10005; Remove</button>
+        <button class="btn-upload-photo" id="upbtn-${c.id}"
+                onclick="triggerPhotoUpload(event,'${esc(c.folder_stem||'')}',${c.id})"
+                title="Upload photo">&#128247;</button>
+        <input type="file" id="upinput-${c.id}" accept="image/*"
+               style="display:none"
+               onchange="handlePhotoUpload(event,'${esc(c.folder_stem||'')}',${c.id})">
+      </div>
+    </div>`;
+
+  el.addEventListener('click', (e) => {
+    if (e.target.closest('.btn-add-label')) return;
+    if (e.target.closest('.label-dropdown')) return;
+    if (e.target.closest('.btn-pdf')) return;
+    if (e.target.closest('.label-chip-remove')) return;
+    if (e.target.closest('.btn-remove-from-view')) return;
+    openPanel(c.id);
+  });
+
+  return el;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Load candidates
+// ═══════════════════════════════════════════════════════════════════════════
+async function loadMore() {
+  if (loading || noMore) return;
+  loading = true;
+  const grid = document.getElementById('grid');
+  let spinner = document.getElementById('loading-spinner');
+  if (!spinner) {
+    spinner = document.createElement('div');
+    spinner.className = 'sentinel';
+    spinner.id = 'loading-spinner';
+    spinner.innerHTML = '<div class="loading-spinner"></div>';
+    grid.after(spinner);
+  }
+  spinner.style.display = 'flex';
+
+  try {
+    const res  = await fetch(`/api/views/${VIEW_ID}/candidates?offset=${offset}&limit=${LIMIT}`);
+    const data = await res.json();
+
+    total = data.total;
+    document.getElementById('count-badge').textContent = total + ' candidates';
+
+    if (data.candidates.length === 0 && offset === 0) {
+      grid.innerHTML = `<div class="empty"><div class="empty-icon">&#128269;</div><p>This view is empty.</p></div>`;
+    } else {
+      data.candidates.forEach(c => grid.appendChild(renderCard(c)));
+    }
+    offset += data.candidates.length;
+    noMore  = !data.has_more;
+  } catch(err) { console.error(err); }
+  finally {
+    loading = false;
+    const s = document.getElementById('loading-spinner');
+    if (s) s.style.display = 'none';
+  }
+}
+
+const io = new IntersectionObserver(e => { if (e[0].isIntersecting) loadMore(); }, { rootMargin: '200px' });
+io.observe(document.getElementById('sentinel'));
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Remove from view
+// ═══════════════════════════════════════════════════════════════════════════
+async function removeFromView(event, cid) {
+  event.stopPropagation();
+  try {
+    const res  = await fetch(`/api/views/${VIEW_ID}/candidates/${cid}`, { method: 'DELETE' });
+    const data = await res.json();
+    const card = document.getElementById('card-' + cid);
+    if (card) card.remove();
+    total = data.total;
+    document.getElementById('count-badge').textContent = total + ' candidates';
+    showToast('Removed from view');
+    if (total === 0) {
+      document.getElementById('grid').innerHTML = `<div class="empty"><div class="empty-icon">&#128269;</div><p>This view is empty.</p></div>`;
+    }
+  } catch(err) { showToast('Error removing candidate'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Labels
+// ═══════════════════════════════════════════════════════════════════════════
+function toggleLabelDropdown(event, cid) {
+  event.stopPropagation();
+  closeAllDropdowns('ldrop-' + cid);
+  const drop = document.getElementById('ldrop-' + cid);
+  if (drop) drop.classList.toggle('open');
+}
+
+async function addLabel(event, cid, labelId, itemEl) {
+  event.stopPropagation();
+  if (itemEl.classList.contains('already-on')) return;
+  try {
+    const res  = await fetch(`/api/candidate/${cid}/labels`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({label_id: labelId}),
+    });
+    const data = await res.json();
+    const c = cardData.get(cid);
+    if (c) { c.labels = data.labels; updateCardLabels(cid, data.labels); }
+    if (panelCid === cid) refreshPanelLabels(data.labels);
+    document.getElementById('ldrop-' + cid).classList.remove('open');
+  } catch(err) {}
+}
+
+async function removeLabel(event, cid, labelId) {
+  event.stopPropagation();
+  try {
+    const res  = await fetch(`/api/candidate/${cid}/labels/${labelId}`, { method: 'DELETE' });
+    const data = await res.json();
+    const c = cardData.get(cid);
+    if (c) { c.labels = data.labels; updateCardLabels(cid, data.labels); }
+    if (panelCid === cid) refreshPanelLabels(data.labels);
+  } catch(err) {}
+}
+
+function updateCardLabels(cid, labels) {
+  const container = document.getElementById('clabels-' + cid);
+  if (!container) return;
+  container.innerHTML = labels.map(l => `
+    <span class="label-chip" style="background:${esc(l.color)}" data-label-id="${l.id}">
+      <span class="label-chip-dot"></span>
+      <span class="label-chip-name" title="${esc(l.name)}">${esc(l.name)}</span>
+      <span class="label-chip-remove" onclick="removeLabel(event,${cid},${l.id})" title="Remove">&#10005;</span>
+    </span>`).join('');
+  const existingIds = new Set(labels.map(l => l.id));
+  const drop = document.getElementById('ldrop-' + cid);
+  if (drop) drop.querySelectorAll('.label-dropdown-item').forEach(item => {
+    item.classList.toggle('already-on', existingIds.has(parseInt(item.dataset.labelId)));
+  });
+}
+
+// ── Inline label creation ─────────────────────────────────────────────────
+const LABEL_SWATCHES = [
+  '#ef4444','#f97316','#eab308','#22c55e','#14b8a6',
+  '#3b82f6','#8b5cf6','#ec4899','#6b7280','#1e293b',
+];
+
+function _initSwatches(cid) {
+  const container = document.getElementById('lnew-swatches-' + cid);
+  if (!container || container.dataset.init) return;
+  container.dataset.init = '1';
+  LABEL_SWATCHES.forEach((col, i) => {
+    const s = document.createElement('div');
+    s.className = 'label-new-swatch' + (i === 0 ? ' selected' : '');
+    s.style.background = col;
+    s.dataset.color = col;
+    s.title = col;
+    s.addEventListener('click', e => {
+      e.stopPropagation();
+      container.querySelectorAll('.label-new-swatch').forEach(x => x.classList.remove('selected'));
+      s.classList.add('selected');
+    });
+    container.appendChild(s);
+  });
+}
+
+function toggleNewLabelForm(event, dropId) {
+  event.stopPropagation();
+  const drop = document.getElementById(dropId);
+  if (!drop) return;
+  const cid = parseInt(dropId.replace('ldrop-', ''));
+  const form = document.getElementById('lnew-' + cid);
+  const trigger = drop.querySelector('.label-new-trigger');
+  if (!form) return;
+  const isOpen = form.classList.contains('open');
+  form.classList.toggle('open', !isOpen);
+  if (trigger) trigger.style.display = isOpen ? '' : 'none';
+  if (!isOpen) {
+    _initSwatches(cid);
+    const inp = document.getElementById('lnew-name-' + cid);
+    if (inp) { inp.value = ''; inp.focus(); }
+  }
+}
+
+function cancelNewLabelForm(event, dropId) {
+  event.stopPropagation();
+  const drop = document.getElementById(dropId);
+  if (!drop) return;
+  const cid = parseInt(dropId.replace('ldrop-', ''));
+  const form = document.getElementById('lnew-' + cid);
+  if (form) form.classList.remove('open');
+  const trigger = drop.querySelector('.label-new-trigger');
+  if (trigger) trigger.style.display = '';
+}
+
+async function createInlineLabel(event, cid) {
+  event.stopPropagation();
+  const nameEl  = document.getElementById('lnew-name-' + cid);
+  const swatches = document.getElementById('lnew-swatches-' + cid);
+  const name  = nameEl ? nameEl.value.trim() : '';
+  if (!name) { if (nameEl) nameEl.focus(); return; }
+  const selSwatch = swatches ? swatches.querySelector('.label-new-swatch.selected') : null;
+  const color = selSwatch ? selSwatch.dataset.color : LABEL_SWATCHES[0];
+
+  const btn = document.querySelector(`#lnew-${cid} .label-new-create`);
+  if (btn) btn.disabled = true;
+
+  try {
+    const res  = await fetch('/api/labels', {
+      method:  'POST',
+      headers: {'Content-Type': 'application/json'},
+      body:    JSON.stringify({ name, color }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showToast(data.error || 'Could not create label');
+      if (btn) btn.disabled = false;
+      return;
+    }
+    ALL_LABELS.push(data);
+    _rebuildAllDropdownLists();
+    cancelNewLabelForm(event, 'ldrop-' + cid);
+    showToast(`Label "${data.name}" created`);
+  } catch(err) {
+    showToast('Network error');
+    if (btn) btn.disabled = false;
+  }
+}
+
+function _rebuildAllDropdownLists() {
+  document.querySelectorAll('.label-dropdown').forEach(drop => {
+    const idMatch = drop.id.match(/^ldrop-(\d+)$/);
+    if (!idMatch) return;
+    const cid = parseInt(idMatch[1]);
+    const c = cardData.get(cid);
+    const existingIds = new Set((c ? c.labels || [] : []).map(l => l.id));
+    const listEl = drop.querySelector('.label-dropdown-list');
+    if (!listEl) return;
+    listEl.innerHTML = ALL_LABELS.length
+      ? ALL_LABELS.map(l => `
+          <div class="label-dropdown-item${existingIds.has(l.id) ? ' already-on' : ''}"
+               data-label-id="${l.id}">
+            <div class="label-dropdown-item-row">
+              <div class="label-item-main" onclick="addLabel(event,${cid},${l.id},this.closest('.label-dropdown-item'))">
+                <span class="label-dot" style="background:${esc(l.color)}"></span>
+                ${esc(l.name)}
+              </div>
+              <div class="label-item-del" onclick="confirmDeleteLabel(event,${l.id},'${esc(l.name)}')" title="Delete label">&#10005;</div>
+            </div>
+          </div>`).join('')
+      : `<div class="label-dropdown-empty">No labels yet</div>`;
+  });
+}
+
+// ── Label delete confirmation popup ──────────────────────────────────────────
+function confirmDeleteLabel(event, labelId, labelName) {
+  event.stopPropagation();
+  closeAllDropdowns();
+
+  const existing = document.getElementById('_ldel-popup');
+  if (existing) existing.remove();
+
+  const popup = document.createElement('div');
+  popup.className = 'ldel-confirm';
+  popup.id = '_ldel-popup';
+  popup.innerHTML = `
+    <div class="ldel-confirm-box">
+      <h4>Delete label?</h4>
+      <p>Are you sure you want to delete <strong>${esc(labelName)}</strong>?<br>It will be removed from all candidates.</p>
+      <div class="ldel-confirm-actions">
+        <button class="ldel-btn-cancel" onclick="document.getElementById('_ldel-popup').remove()">Cancel</button>
+        <button class="ldel-btn-delete" onclick="_deleteLabelById(${labelId},'${esc(labelName)}')">Delete</button>
+      </div>
+    </div>`;
+  popup.addEventListener('click', e => { if (e.target === popup) popup.remove(); });
+  document.body.appendChild(popup);
+}
+
+async function _deleteLabelById(labelId, labelName) {
+  const popup = document.getElementById('_ldel-popup');
+  if (popup) popup.remove();
+
+  try {
+    const res = await fetch('/api/labels/' + labelId, { method: 'DELETE' });
+    if (!res.ok) { showToast('Error deleting label'); return; }
+
+    // Remove from global list
+    const idx = ALL_LABELS.findIndex(l => l.id === labelId);
+    if (idx !== -1) ALL_LABELS.splice(idx, 1);
+
+    // Remove chip from every card that has it
+    cardData.forEach((c, cid) => {
+      if (c.labels && c.labels.some(l => l.id === labelId)) {
+        c.labels = c.labels.filter(l => l.id !== labelId);
+        updateCardLabels(cid, c.labels);
+      }
+    });
+
+    _rebuildAllDropdownLists();
+    showToast(`Label "${labelName}" deleted`);
+  } catch(err) { showToast('Network error'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Detail panel
+// ═══════════════════════════════════════════════════════════════════════════
+function openPanel(cid) {
+  const c = cardData.get(cid);
+  if (!c) return;
+  panelCid = cid;
+
+  const photo = c.photo_url
+    ? `<img class="panel-photo" src="${c.photo_url}" alt="${esc(c.name)}">`
+    : `<div class="panel-photo-ph">&#128105;</div>`;
+
+  const pdfBtn = c.pdf_url
+    ? `<a class="panel-pdf-btn" href="${c.pdf_url}" target="_blank" rel="noopener">&#128196; Open full biodata PDF</a>`
+    : '';
+
+  const labelHtml = (c.labels || []).map(l =>
+    `<span class="label-chip" style="background:${esc(l.color)};margin-bottom:3px">
+       <span class="label-chip-dot"></span>
+       <span class="label-chip-name">${esc(l.name)}</span>
+     </span>`).join('');
+
+  document.getElementById('panel-header').innerHTML = `
+    ${photo}
+    <div class="panel-title">
+      <h2>${esc(c.name)}</h2>
+      <div class="meta">
+        ${c.birth_year ? 'Born ' + c.birth_year : ''}
+        ${c.age ? ' · ' + c.age + ' yrs' : ''}
+        ${c.height && c.height !== 'Not Mentioned' ? ' · ' + esc(c.height) : ''}
+      </div>
+      <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;" id="panel-labels">${labelHtml}</div>
+      ${ALL_VIEWS.length ? `
+      <div class="panel-atv-wrap" id="panel-atv-wrap-${c.id}">
+        <button class="panel-atv-btn" onclick="togglePanelAtvPopup(event,${c.id})">&#43; Add to view</button>
+      </div>` : ''}
+    </div>
+    <button class="panel-close" onclick="closePanel()">&#10005;</button>`;
+
+  document.getElementById('panel-body').innerHTML = `
+    <div class="panel-section">
+      <div class="panel-section-title">Personal</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">Date of Birth</div>${nm(c.date_of_birth)}</div>
+        <div class="detail-item"><div class="detail-label">Height</div>${nm(c.height)}</div>
+        <div class="detail-item"><div class="detail-label">Weight</div>${nm(c.weight)}</div>
+        <div class="detail-item"><div class="detail-label">Caste</div>${nm(c.caste)}</div>
+        <div class="detail-item"><div class="detail-label">Residential City</div>${nm(c.residential_city)}</div>
+        <div class="detail-item"><div class="detail-label">Gender</div>${nm(c.gender)}</div>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">Education &amp; Career</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">Education</div>${nm(c.education)}</div>
+        <div class="detail-item"><div class="detail-label">Occupation</div>${nm(c.occupation)}</div>
+        <div class="detail-item"><div class="detail-label">Job Location</div>${nm(c.job_location)}</div>
+        <div class="detail-item"><div class="detail-label">Candidate Contact</div>${nm(c.candidate_contact)}</div>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">Family</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">Father's Name</div>${nm(c.fathers_name)}</div>
+        <div class="detail-item"><div class="detail-label">Father's Contact</div>${nm(c.fathers_contact)}</div>
+        <div class="detail-item"><div class="detail-label">Mother's Name</div>${nm(c.mothers_name)}</div>
+        <div class="detail-item"><div class="detail-label">Mother's Contact</div>${nm(c.mothers_contact)}</div>
+      </div>
+    </div>
+    ${pdfBtn}`;
+
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('panel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function refreshPanelLabels(labels) {
+  const c = document.getElementById('panel-labels');
+  if (c) c.innerHTML = labels.map(l =>
+    `<span class="label-chip" style="background:${esc(l.color)};margin-bottom:3px">
+       <span class="label-chip-dot"></span>
+       <span class="label-chip-name">${esc(l.name)}</span>
+     </span>`).join('');
+}
+
+function closePanel() {
+  panelCid = null;
+  if (typeof _closeAtvPopup === 'function') _closeAtvPopup();
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('panel').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closePanel(); closeAllDropdowns(); } });
+
+function closeAllDropdowns(exceptId) {
+  document.querySelectorAll('.label-dropdown.open').forEach(el => { if (el.id !== exceptId) el.classList.remove('open'); });
+  document.querySelectorAll('.panel-atv-popup.open').forEach(p => p.classList.remove('open'));
+}
+document.addEventListener('click', e => {
+  closeAllDropdowns();
+  if (!e.target.closest('#_panel-atv-global') && !e.target.closest('.panel-atv-wrap')) {
+    _closeAtvPopup();
+  }
+});
+
+// ── Panel "Add to view" — single floating popup appended to <body> ────────
+let _panelViewMembership = {};
+let _atvCurrentCid = null;
+
+function _getAtvPopup() {
+  let el = document.getElementById('_panel-atv-global');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '_panel-atv-global';
+    el.className = 'panel-atv-popup';
+    el.innerHTML = '<div class="panel-atv-header">Add to view</div><div id="_panel-atv-list"></div>';
+    el.addEventListener('click', e => e.stopPropagation());
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+function _closeAtvPopup() {
+  const el = document.getElementById('_panel-atv-global');
+  if (el) el.classList.remove('open');
+  _atvCurrentCid = null;
+}
+
+async function togglePanelAtvPopup(event, cid) {
+  event.stopPropagation();
+  const popup = _getAtvPopup();
+  const isOpen = popup.classList.contains('open') && _atvCurrentCid === cid;
+  _closeAtvPopup();
+  if (isOpen) return;
+
+  const btn = event.currentTarget;
+  const rect = btn.getBoundingClientRect();
+  const viewH = window.innerHeight;
+  const popupH = 220;
+  const top = (rect.bottom + popupH > viewH) ? Math.max(0, rect.top - popupH) : (rect.bottom + 5);
+  popup.style.left  = rect.left + 'px';
+  popup.style.top   = top + 'px';
+  popup.style.right = 'auto';
+
+  _atvCurrentCid = cid;
+  popup.classList.add('open');
+  const list = document.getElementById('_panel-atv-list');
+  list.innerHTML = '<div class="panel-atv-empty">Loading…</div>';
+
+  try {
+    const res  = await fetch(`/api/candidate/${cid}/views`);
+    const data = await res.json();
+    _panelViewMembership = {};
+    (data.view_ids || []).forEach(id => { _panelViewMembership[id] = true; });
+  } catch(e) { _panelViewMembership = {}; }
+
+  if (_atvCurrentCid !== cid) return;
+
+  if (!ALL_VIEWS.length) {
+    list.innerHTML = '<div class="panel-atv-empty">No saved views yet</div>';
+    return;
+  }
+
+  list.innerHTML = ALL_VIEWS.map(v => {
+    const inView = !!_panelViewMembership[v.id];
+    return `<div class="panel-atv-item${inView ? ' already' : ''}"
+                 onclick="${inView ? '' : `panelAddToView(event,${cid},${v.id},'${esc(v.name)}')`}">
+      <span>${esc(v.name)}</span>
+      <span class="panel-atv-badge ${inView ? 'in' : 'notIn'}" id="panel-atv-badge-${v.id}-${cid}">
+        ${inView ? '✓ In view' : '+ Add'}
+      </span>
+    </div>`;
+  }).join('');
+}
+
+async function panelAddToView(event, cid, viewId, viewName) {
+  event.stopPropagation();
+  const badge = document.getElementById(`panel-atv-badge-${viewId}-${cid}`);
+  const item  = badge?.closest('.panel-atv-item');
+  if (!badge || item?.classList.contains('already')) return;
+
+  badge.textContent = '…';
+
+  try {
+    const res  = await fetch(`/api/views/${viewId}/candidates`, {
+      method:  'POST',
+      headers: {'Content-Type':'application/json'},
+      body:    JSON.stringify({ candidate_ids: [cid] }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      badge.textContent = '✓ In view';
+      badge.className   = 'panel-atv-badge in';
+      item.classList.add('already');
+      item.onclick = null;
+      _panelViewMembership[viewId] = true;
+      if (data.already_in > 0) {
+        showToast(`Already in "${viewName}"`);
+      } else {
+        showToast(`Added to "${viewName}"`);
+      }
+    } else {
+      badge.textContent = '+ Add';
+      showToast('Error: ' + (data.error || 'unknown'));
+    }
+  } catch(err) {
+    badge.textContent = '+ Add';
+    showToast('Network error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Toast
+// ═══════════════════════════════════════════════════════════════════════════
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function nm(v) {
+  if (!v || v === 'Not Mentioned') return '<span class="detail-value nm">Not mentioned</span>';
+  return '<span class="detail-value">' + esc(v) + '</span>';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Photo upload
+// ═══════════════════════════════════════════════════════════════════════════
+function triggerPhotoUpload(event, stem, cid) {
+  event.stopPropagation();
+  const input = document.getElementById('upinput-' + cid);
+  if (input) input.click();
+}
+
+async function handlePhotoUpload(event, stem, cid) {
+  event.stopPropagation();
+  const input = event.target;
+  const file  = input.files[0];
+  if (!file) return;
+
+  const btn = document.getElementById('upbtn-' + cid);
+  if (btn) { btn.classList.add('uploading'); btn.textContent = '⏳'; }
+
+  const formData = new FormData();
+  formData.append('photo', file);
+
+  try {
+    const res  = await fetch(`/candidate/${encodeURIComponent(stem)}/photo`, {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      const ts     = Date.now();
+      const newUrl = `/candidate/${encodeURIComponent(stem)}/photo?t=${ts}`;
+      const card   = document.getElementById('card-' + cid);
+      if (card) {
+        const img = card.querySelector('.card-photo');
+        if (img) {
+          img.src = newUrl;
+        } else {
+          const ph = card.querySelector('.card-photo-placeholder');
+          if (ph) {
+            const newImg = document.createElement('img');
+            newImg.className = 'card-photo';
+            newImg.src = newUrl;
+            newImg.alt = '';
+            newImg.loading = 'lazy';
+            ph.replaceWith(newImg);
+          }
+        }
+      }
+      const c = cardData.get(cid);
+      if (c) c.photo_url = newUrl;
+      showToast('Photo updated');
+    } else {
+      showToast('Upload failed: ' + (data.error || 'Unknown error'));
+    }
+  } catch (err) {
+    showToast('Upload error');
+  } finally {
+    if (btn) { btn.classList.remove('uploading'); btn.textContent = '📷'; }
+    input.value = '';
+  }
+}
+
+// Init
+loadMore();
+</script>
+</body>
+</html>

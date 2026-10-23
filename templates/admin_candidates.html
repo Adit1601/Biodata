@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Candidates</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#f5f5f7; --surface:#fff; --border:#e0e0e0;
+    --primary:#2563eb; --text:#1a1a1a; --muted:#6b7280;
+    --radius:10px; --shadow:0 2px 8px rgba(0,0,0,0.07);
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ── HEADER ── */
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; box-shadow: 0 1px 4px rgba(0,0,0,0.06); position: sticky; top: 0; z-index: 100; }
+  .back-btn { font-size: 0.82rem; color: var(--muted); text-decoration: none; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; }
+  .back-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .header h1 { font-size: 1.1rem; font-weight: 700; color: #dc2626; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .user-badge { font-size: 0.78rem; color: var(--muted); font-weight: 500; padding: 3px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 99px; }
+  .logout-link { font-size: 0.78rem; color: var(--muted); text-decoration: none; padding: 3px 8px; border: 1px solid var(--border); border-radius: 99px; background: var(--bg); }
+  .logout-link:hover { color: #dc2626; border-color: #fca5a5; }
+
+  /* ── PAGE ── */
+  .page { max-width: 1000px; margin: 28px auto; padding: 0 20px 60px; }
+
+  /* ── TOOLBAR ── */
+  .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .toolbar-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+  .search-wrap { display: flex; gap: 8px; flex: 1; max-width: 340px; }
+  .search-wrap input { flex: 1; padding: 7px 11px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; background: var(--surface); outline: none; }
+  .search-wrap input:focus { border-color: var(--primary); }
+  .search-wrap button { padding: 7px 14px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 0.82rem; cursor: pointer; }
+  .count-pill { font-size: 0.78rem; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 99px; padding: 2px 10px; white-space: nowrap; }
+
+  /* ── MERGE BAR ── */
+  .merge-bar {
+    display: none; align-items: center; gap: 12px;
+    background: #eff6ff; border: 1px solid #bfdbfe;
+    border-radius: 9px; padding: 10px 16px; margin-bottom: 12px;
+  }
+  .merge-bar.visible { display: flex; }
+  .merge-bar-label { font-size: 0.85rem; font-weight: 600; color: var(--primary); flex: 1; }
+  .btn-merge { background: var(--primary); color: #fff; border: none; border-radius: 8px; padding: 8px 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+  .btn-merge:hover:not(:disabled) { background: #1d4ed8; }
+  .btn-merge:disabled { opacity: 0.45; cursor: default; }
+  .btn-clear { font-size: 0.8rem; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 7px; padding: 7px 12px; cursor: pointer; }
+  .btn-clear:hover { color: #dc2626; border-color: #fca5a5; }
+
+  /* ── TABLE ── */
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: clip; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+  thead th {
+    text-align: left; padding: 10px 14px;
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--muted); font-weight: 600;
+    border-bottom: 1px solid var(--border); background: var(--bg);
+    white-space: nowrap;
+    position: sticky; top: 57px; z-index: 20;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; z-index: 1; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #f8f9fb; }
+  tbody tr.selected-row { background: #eff6ff !important; }
+  td { padding: 10px 14px; vertical-align: middle; }
+  .row-check { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); }
+
+  .photo-thumb { width: 36px; height: 44px; object-fit: cover; border-radius: 5px; border: 1px solid var(--border); display: block; }
+  .photo-placeholder { width: 36px; height: 44px; border-radius: 5px; background: var(--bg); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 1rem; color: var(--muted); }
+  .name-cell { font-weight: 600; }
+  .meta-cell { color: var(--muted); font-size: 0.78rem; }
+  .owner-tag { font-size: 0.68rem; color: #6366f1; background: #ede9fe; border-radius: 99px; padding: 1px 7px; }
+  .edit-link { font-size: 0.75rem; color: var(--primary); text-decoration: none; padding: 3px 9px; border: 1px solid #bfdbfe; border-radius: 6px; background: #eff6ff; white-space: nowrap; }
+  .edit-link:hover { background: #dbeafe; }
+
+  /* ── INFINITE SCROLL SENTINEL ── */
+  .sentinel { height: 1px; }
+  .load-spinner { display: none; text-align: center; padding: 18px; font-size: 0.82rem; color: var(--muted); }
+  .load-spinner.visible { display: block; }
+  .end-note { text-align: center; padding: 18px; font-size: 0.78rem; color: var(--muted); display: none; }
+  .end-note.visible { display: block; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a class="back-btn" href="/admin">&#8592; Users</a>
+  <h1>&#9760; Admin — Candidates</h1>
+  <div class="header-right">
+    <span class="user-badge">{{ current_user.username }}</span>
+    <a class="logout-link" href="/logout">Sign out</a>
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="toolbar">
+    <span class="toolbar-title">All Candidates</span>
+    <div class="search-wrap">
+      <input type="text" id="search-input" placeholder="Search name…"
+             value="{{ search }}" onkeydown="if(event.key==='Enter')doSearch()">
+      <button onclick="doSearch()">Search</button>
+    </div>
+    <span class="count-pill" id="count-pill">{{ total }} total</span>
+  </div>
+
+  <!-- merge action bar -->
+  <div class="merge-bar" id="merge-bar">
+    <span class="merge-bar-label" id="merge-label">0 profiles selected</span>
+    <button class="btn-merge" id="btn-merge" disabled onclick="submitMerge()">&#9654; Merge selected</button>
+    <button class="btn-clear" onclick="clearSelection()">&#10005; Clear</button>
+  </div>
+
+  <!-- hidden form that POSTs the selected IDs to /admin/merge -->
+  <form id="merge-form" method="POST" action="/admin/merge" style="display:none">
+    <div id="merge-inputs"></div>
+  </form>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:34px">
+            <input type="checkbox" id="select-all" title="Select all loaded"
+                   onchange="toggleAll(this)">
+          </th>
+          <th style="width:50px"></th>
+          <th>Name</th>
+          <th>DOB / Age</th>
+          <th>Height · Weight</th>
+          <th>City</th>
+          <th>Owner</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="candidates-tbody">
+        <!-- rows injected by JS below -->
+      </tbody>
+    </table>
+  </div>
+
+  <div class="load-spinner" id="spinner">Loading…</div>
+  <div class="end-note"   id="end-note">All candidates loaded</div>
+  <div class="sentinel"   id="sentinel"></div>
+
+</div><!-- /page -->
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+const LIMIT   = 50;
+let   offset  = 0;
+let   loading = false;
+let   allDone = false;
+let   search  = {{ search | tojson }};
+
+// Persist selection across loads
+const selected = new Set();
+
+// ── Render helpers ─────────────────────────────────────────────────────────
+function photoCell(c) {
+  if (c.photo_url) {
+    return `<img class="photo-thumb" src="${c.photo_url}" alt="">`;
+  }
+  return `<div class="photo-placeholder">👤</div>`;
+}
+
+function ownerCell(c) {
+  if (c.created_by_user_id) {
+    return `<span class="owner-tag">user #${c.created_by_user_id}</span>`;
+  }
+  return `<span style="font-size:0.72rem;color:var(--muted)">admin</span>`;
+}
+
+function makeRow(c) {
+  const chk     = selected.has(String(c.id)) ? 'checked' : '';
+  const selCls  = selected.has(String(c.id)) ? 'selected-row' : '';
+  const dob     = c.date_of_birth || '—';
+  const age     = c.age           ? `<br>${c.age} yrs` : '';
+  const ht      = c.height        || '—';
+  const wt      = c.weight        ? ` · ${c.weight}` : '';
+  const city    = c.residential_city || '—';
+  const name    = c.name          || '—';
+
+  return `
+  <tr id="row-${c.id}" class="${selCls}">
+    <td><input class="row-check" type="checkbox" value="${c.id}" ${chk}
+               onchange="onCheck(this)"></td>
+    <td>${photoCell(c)}</td>
+    <td class="name-cell">${esc(name)}</td>
+    <td class="meta-cell">${esc(dob)}${age}</td>
+    <td class="meta-cell">${esc(ht)}${esc(wt)}</td>
+    <td class="meta-cell">${esc(city)}</td>
+    <td>${ownerCell(c)}</td>
+    <td><a class="edit-link" href="/admin/candidate/${c.id}/edit">Edit &#8250;</a></td>
+  </tr>`;
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Load batch ─────────────────────────────────────────────────────────────
+async function loadMore() {
+  if (loading || allDone) return;
+  loading = true;
+  document.getElementById('spinner').classList.add('visible');
+
+  const params = new URLSearchParams({ offset, limit: LIMIT });
+  if (search) params.set('search', search);
+
+  try {
+    const res  = await fetch(`/api/candidates?${params}`);
+    const data = await res.json();
+
+    const tbody = document.getElementById('candidates-tbody');
+    data.candidates.forEach(c => {
+      tbody.insertAdjacentHTML('beforeend', makeRow(c));
+    });
+
+    // Update total count display
+    document.getElementById('count-pill').textContent =
+      `${data.total} total · ${document.querySelectorAll('#candidates-tbody tr').length} loaded`;
+
+    offset += data.candidates.length;
+
+    if (!data.has_more) {
+      allDone = true;
+      document.getElementById('end-note').classList.add('visible');
+      observer.disconnect();
+    }
+  } catch(e) {
+    console.error('Load error', e);
+  } finally {
+    loading = false;
+    document.getElementById('spinner').classList.remove('visible');
+  }
+}
+
+// ── Intersection observer ──────────────────────────────────────────────────
+const observer = new IntersectionObserver(entries => {
+  if (entries[0].isIntersecting) loadMore();
+}, { rootMargin: '200px' });
+
+observer.observe(document.getElementById('sentinel'));
+
+// ── Selection ──────────────────────────────────────────────────────────────
+function onCheck(cb) {
+  const id = cb.value;
+  if (cb.checked) {
+    selected.add(id);
+    document.getElementById('row-' + id)?.classList.add('selected-row');
+  } else {
+    selected.delete(id);
+    document.getElementById('row-' + id)?.classList.remove('selected-row');
+    document.getElementById('select-all').checked = false;
+  }
+  updateBar();
+}
+
+function toggleAll(master) {
+  document.querySelectorAll('.row-check').forEach(cb => {
+    cb.checked = master.checked;
+    if (master.checked) {
+      selected.add(cb.value);
+      document.getElementById('row-' + cb.value)?.classList.add('selected-row');
+    } else {
+      selected.delete(cb.value);
+      document.getElementById('row-' + cb.value)?.classList.remove('selected-row');
+    }
+  });
+  updateBar();
+}
+
+function clearSelection() {
+  selected.clear();
+  document.querySelectorAll('.row-check').forEach(cb => cb.checked = false);
+  document.getElementById('select-all').checked = false;
+  document.querySelectorAll('tbody tr').forEach(tr => tr.classList.remove('selected-row'));
+  updateBar();
+}
+
+function updateBar() {
+  const n   = selected.size;
+  const bar = document.getElementById('merge-bar');
+  const lbl = document.getElementById('merge-label');
+  const btn = document.getElementById('btn-merge');
+  lbl.textContent = `${n} profile${n === 1 ? '' : 's'} selected`;
+  btn.disabled    = n < 2;
+  bar.classList.toggle('visible', n >= 1);
+}
+
+function submitMerge() {
+  if (selected.size < 2) return;
+  const container = document.getElementById('merge-inputs');
+  container.innerHTML = '';
+  selected.forEach(id => {
+    const inp   = document.createElement('input');
+    inp.type  = 'hidden';
+    inp.name  = 'ids';
+    inp.value = id;
+    container.appendChild(inp);
+  });
+  document.getElementById('merge-form').submit();
+}
+
+// ── Search ─────────────────────────────────────────────────────────────────
+function doSearch() {
+  const val = document.getElementById('search-input').value.trim();
+  // Reset state and reload from scratch with new search term
+  search  = val || '';
+  offset  = 0;
+  allDone = false;
+  document.getElementById('candidates-tbody').innerHTML = '';
+  document.getElementById('end-note').classList.remove('visible');
+  document.getElementById('count-pill').textContent = '…';
+
+  // Re-attach observer in case it was disconnected
+  observer.observe(document.getElementById('sentinel'));
+  loadMore();
+}
+</script>
+</body>
+</html>

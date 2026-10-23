@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% if mode == 'edit' %}{% if candidate %}Edit Profile{% else %}Create Profile{% endif %}{% else %}My Profile{% endif %} — Biodata</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:      #f5f5f7;
+    --surface: #ffffff;
+    --border:  #e0e0e0;
+    --primary: #2563eb;
+    --primary-h:#1d4ed8;
+    --text:    #1a1a1a;
+    --muted:   #6b7280;
+    --radius:  12px;
+    --shadow:  0 2px 8px rgba(0,0,0,0.08);
+  }
+
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ── HEADER ── */
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); flex-wrap: wrap; }
+  .back-btn { font-size: 0.82rem; color: var(--muted); text-decoration: none; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; white-space: nowrap; }
+  .back-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .header h1 { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .user-badge { font-size: 0.78rem; color: var(--muted); font-weight: 500; padding: 3px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 99px; }
+  .logout-link { font-size: 0.78rem; color: var(--muted); text-decoration: none; padding: 3px 8px; border: 1px solid var(--border); border-radius: 99px; background: var(--bg); transition: color 0.12s; }
+  .logout-link:hover { color: #dc2626; border-color: #fca5a5; }
+  .edit-link { font-size: 0.82rem; color: var(--primary); text-decoration: none; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; font-weight: 500; white-space: nowrap; }
+  .edit-link:hover { background: #eff6ff; border-color: var(--primary); }
+
+  /* ── PAGE ── */
+  .page { max-width: 700px; margin: 32px auto; padding: 0 20px 60px; }
+
+  /* ── EMPTY STATE ── */
+  .empty-state { text-align: center; padding: 60px 20px; }
+  .empty-state .emoji { font-size: 3rem; margin-bottom: 16px; }
+  .empty-state h2 { font-size: 1.2rem; margin-bottom: 8px; }
+  .empty-state p { color: var(--muted); font-size: 0.88rem; margin-bottom: 24px; }
+  .btn-create { display: inline-block; background: var(--primary); color: #fff; border-radius: 9px; padding: 10px 24px; font-size: 0.9rem; font-weight: 600; text-decoration: none; }
+  .btn-create:hover { background: var(--primary-h); }
+
+  /* ── PROFILE VIEW ── */
+  .profile-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .profile-hero { display: flex; align-items: flex-start; gap: 20px; padding: 24px; border-bottom: 1px solid var(--border); }
+  .profile-photo-wrap { position: relative; flex-shrink: 0; }
+  .profile-photo { width: 120px; height: 140px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border); display: block; }
+  .profile-photo-placeholder { width: 120px; height: 140px; border-radius: 10px; border: 2px dashed var(--border); background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: var(--muted); }
+  .profile-hero-body { flex: 1; min-width: 0; }
+  .profile-name { font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; }
+  .profile-dob { font-size: 0.85rem; color: var(--muted); margin-bottom: 10px; }
+  .profile-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 0.75rem; background: #eff6ff; color: var(--primary); border-radius: 99px; padding: 3px 10px; font-weight: 500; }
+  .chip.gray { background: #f3f4f6; color: var(--muted); }
+
+  .profile-section { padding: 20px 24px; border-bottom: 1px solid var(--border); }
+  .profile-section:last-child { border-bottom: none; }
+  .section-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 14px; font-weight: 600; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; }
+  @media (max-width: 480px) { .detail-grid { grid-template-columns: 1fr; } }
+  .detail-item {}
+  .detail-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 2px; }
+  .detail-value { font-size: 0.88rem; font-weight: 500; }
+  .detail-value.nm { color: var(--muted); font-weight: 400; font-style: italic; }
+
+  .pdf-link { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--primary); text-decoration: none; font-weight: 500; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 6px 14px; margin-top: 8px; }
+  .pdf-link:hover { background: #dbeafe; }
+
+  /* ── FORM ── */
+  .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px; }
+  .form-title { font-size: 1rem; font-weight: 700; margin-bottom: 22px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .form-section { margin-bottom: 24px; }
+  .form-section-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); font-weight: 600; margin-bottom: 14px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .form-row.single { grid-template-columns: 1fr; }
+  @media (max-width: 520px) { .form-row { grid-template-columns: 1fr; } }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label { font-size: 0.8rem; font-weight: 500; color: var(--text); }
+  .form-group label .req { color: #dc2626; margin-left: 2px; }
+  .form-group input, .form-group select, .form-group textarea {
+    padding: 8px 11px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 0.88rem; color: var(--text); background: var(--bg);
+    outline: none; transition: border-color 0.15s; font-family: inherit;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary); background: #fff; }
+  .form-group .hint { font-size: 0.74rem; color: var(--muted); }
+  .photo-row { display: flex; align-items: flex-start; gap: 16px; }
+  .photo-preview-wrap { flex-shrink: 0; }
+  .photo-preview { width: 80px; height: 96px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); display: block; }
+  .photo-preview-placeholder { width: 80px; height: 96px; border-radius: 8px; border: 2px dashed var(--border); background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; color: var(--muted); }
+  .photo-input-area { flex: 1; }
+  .file-pick-btn { display: inline-block; font-size: 0.82rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px; cursor: pointer; transition: border-color 0.15s; }
+  .file-pick-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+  .error-box { background: #fee2e2; border: 1px solid #fca5a5; color: #dc2626; border-radius: 8px; padding: 10px 14px; font-size: 0.83rem; margin-bottom: 18px; }
+
+  .form-actions { display: flex; gap: 10px; align-items: center; padding-top: 8px; }
+  .btn-save { background: var(--primary); color: #fff; border: none; border-radius: 9px; padding: 10px 28px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+  .btn-save:hover { background: var(--primary-h); }
+  .btn-delete { margin-left: auto; background: none; border: 1px solid #fca5a5; color: #dc2626; border-radius: 8px; padding: 9px 16px; font-size: 0.82rem; cursor: pointer; transition: all 0.12s; }
+  .btn-delete:hover { background: #fee2e2; border-color: #dc2626; }
+  .confirm-delete { display: none; margin-top: 16px; padding: 16px; background: #fff0f0; border: 1px solid #fca5a5; border-radius: 8px; }
+  .confirm-delete p { font-size: 0.85rem; color: #dc2626; font-weight: 500; margin-bottom: 12px; }
+  .confirm-actions { display: flex; gap: 8px; }
+  .btn-confirm-delete { background: #dc2626; color: #fff; border: none; border-radius: 7px; padding: 8px 18px; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+  .btn-cancel-confirm { font-size: 0.82rem; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 8px 14px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<div class="header">
+  <a class="back-btn" href="/">&#8592; All Candidates</a>
+  <h1>&#128100;
+    {% if mode == 'edit' %}
+      {% if candidate %}Edit My Profile{% else %}Create My Profile{% endif %}
+    {% else %}
+      My Profile
+    {% endif %}
+  </h1>
+  <div class="header-right">
+    {% if mode == 'view' and candidate %}
+      <a class="edit-link" href="/profile/me/edit">&#9998; Edit</a>
+    {% endif %}
+    <span class="user-badge">{{ current_user.username }}</span>
+    <a class="logout-link" href="/logout">Sign out</a>
+  </div>
+</div>
+
+<div class="page">
+
+{% if mode == 'view' %}
+  {% if candidate %}
+  <!-- ── PROFILE VIEW ── -->
+  <div class="profile-card">
+    <div class="profile-hero">
+      <div class="profile-photo-wrap">
+        {% if candidate.photo_url %}
+          <img class="profile-photo" src="{{ candidate.photo_url }}" alt="Photo">
+        {% else %}
+          <div class="profile-photo-placeholder">👤</div>
+        {% endif %}
+      </div>
+      <div class="profile-hero-body">
+        <div class="profile-name">{{ candidate.name or 'No name' }}</div>
+        <div class="profile-dob">{{ candidate.date_of_birth or '' }}{% if candidate.age %} · {{ candidate.age }} yrs{% endif %}</div>
+        <div class="profile-chips">
+          {% if candidate.gender %}<span class="chip">{{ candidate.gender }}</span>{% endif %}
+          {% if candidate.height %}<span class="chip gray">{{ candidate.height }}</span>{% endif %}
+          {% if candidate.weight %}<span class="chip gray">{{ candidate.weight }}</span>{% endif %}
+          {% if candidate.residential_city %}<span class="chip gray">{{ candidate.residential_city }}</span>{% endif %}
+        </div>
+        {% if candidate.pdf_url %}
+          <a class="pdf-link" href="{{ candidate.pdf_url }}" target="_blank">&#128196; View Biodata PDF</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <div class="section-title">Personal</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">Marital status</div><div class="detail-value {% if not candidate.marital_status %}nm{% endif %}">{{ candidate.marital_status or 'Not mentioned' }}</div></div>
+        <div class="detail-item"><div class="detail-label">Blood group</div><div class="detail-value {% if not candidate.blood_group %}nm{% endif %}">{{ candidate.blood_group or 'Not mentioned' }}</div></div>
+        <div class="detail-item"><div class="detail-label">Height</div><div class="detail-value {% if not candidate.height %}nm{% endif %}">{{ candidate.height or 'Not mentioned' }}</div></div>
+        <div class="detail-item"><div class="detail-label">Weight</div><div class="detail-value {% if not candidate.weight %}nm{% endif %}">{{ candidate.weight or 'Not mentioned' }}</div></div>
+        <div class="detail-item"><div class="detail-label">Mother tongue</div><div class="detail-value {% if not candidate.mother_tongue %}nm{% endif %}">{{ candidate.mother_tongue or 'Not mentioned' }}</div></div>
+        <div class="detail-item"><div class="detail-label">State</div><div class="detail-value {% if not candidate.state %}nm{% endif %}">{{ candidate.state or 'Not mentioned' }}</div></div>
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <div class="section-title">Caste &amp; Religion</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">Caste</div><div class="detail-value {% if not candidate.caste %}nm{% endif %}">{{ candidate.caste or 'Not mentioned' }}</div></div>
+        <div class="detail-item"><div class="detail-label">Sub-caste</div><div class="detail-value {% if not candidate.sub_caste %}nm{% endif %}">{{ candidate.sub_caste or 'Not mentioned' }}</div></div>
+        <div class="detail-item"><div class="detail-label">Gotra</div><div class="detail-value {% if not candidate.gotra %}nm{% endif %}">{{ candidate.gotra or 'Not mentioned' }}</div></div>
+        <div class="detail-item"><div class="detail-label">Manglik</div><div class="detail-value {% if not candidate.manglik %}nm{% endif %}">{{ candidate.manglik or 'Not mentioned' }}</div></div>
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <div class="section-title">Education &amp; Career</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">Education</div><div class="detail-value {% if not candidate.education %}nm{% endif %}">{{ candidate.education or 'Not mentioned' }}</div></div>
+        <div class="detail-item"><div class="detail-label">Occupation</div><div class="detail-value {% if not candidate.occupation %}nm{% endif %}">{{ candidate.occupation or 'Not mentioned' }}</div></div>
+        <div class="detail-item"><div class="detail-label">Current location</div><div class="detail-value {% if not candidate.job_location %}nm{% endif %}">{{ candidate.job_location or 'Not mentioned' }}</div></div>
+        <div class="detail-item"><div class="detail-label">Annual salary</div><div class="detail-value {% if not candidate.salary %}nm{% endif %}">{{ candidate.salary or 'Not mentioned' }}</div></div>
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <div class="section-title">Family</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">Father's name</div><div class="detail-value {% if not candidate.fathers_name %}nm{% endif %}">{{ candidate.fathers_name or 'Not mentioned' }}{% if candidate.fathers_contact %} · {{ candidate.fathers_contact }}{% endif %}</div></div>
+        <div class="detail-item"><div class="detail-label">Father's occupation</div><div class="detail-value {% if not candidate.fathers_occupation %}nm{% endif %}">{{ candidate.fathers_occupation or 'Not mentioned' }}</div></div>
+        <div class="detail-item"><div class="detail-label">Mother's name</div><div class="detail-value {% if not candidate.mothers_name %}nm{% endif %}">{{ candidate.mothers_name or 'Not mentioned' }}{% if candidate.mothers_contact %} · {{ candidate.mothers_contact }}{% endif %}</div></div>
+        <div class="detail-item"><div class="detail-label">Mother's occupation</div><div class="detail-value {% if not candidate.mothers_occupation %}nm{% endif %}">{{ candidate.mothers_occupation or 'Not mentioned' }}</div></div>
+        <div class="detail-item"><div class="detail-label">Siblings</div><div class="detail-value {% if not candidate.siblings %}nm{% endif %}">{{ candidate.siblings or 'Not mentioned' }}</div></div>
+        <div class="detail-item"><div class="detail-label">Phone</div><div class="detail-value {% if not candidate.candidate_contact %}nm{% endif %}">{{ candidate.candidate_contact or 'Not mentioned' }}</div></div>
+        <div class="detail-item"><div class="detail-label">Email</div><div class="detail-value {% if not candidate.candidate_email %}nm{% endif %}">{{ candidate.candidate_email or 'Not mentioned' }}</div></div>
+      </div>
+    </div>
+
+    {% if candidate.hobbies %}
+    <div class="profile-section">
+      <div class="section-title">Hobbies</div>
+      <div class="detail-value">{{ candidate.hobbies }}</div>
+    </div>
+    {% endif %}
+
+    {% if candidate.about_me %}
+    <div class="profile-section">
+      <div class="section-title">About Me</div>
+      <div class="detail-value" style="line-height:1.6;white-space:pre-wrap">{{ candidate.about_me }}</div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% else %}
+  <!-- ── NO PROFILE YET ── -->
+  <div class="empty-state">
+    <div class="emoji">👤</div>
+    <h2>You haven't created a profile yet</h2>
+    <p>Add yourself to the biodata pool so others can find you.</p>
+    <a class="btn-create" href="/profile/me/edit">Create my profile</a>
+  </div>
+  {% endif %}
+
+{% else %}
+  <!-- ── EDIT / CREATE FORM ── -->
+  <div class="form-card">
+    <div class="form-title">{% if candidate %}Edit My Profile{% else %}Create My Profile{% endif %}</div>
+
+    {% if error %}
+    <div class="error-box">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="/profile/me/edit" enctype="multipart/form-data" autocomplete="off">
+
+      <!-- Photo + PDF at top -->
+      <div class="form-section">
+        <div class="form-section-title">Photo &amp; Biodata PDF</div>
+
+        <div class="photo-row" style="margin-bottom:14px">
+          <div class="photo-preview-wrap">
+            {% if candidate and candidate.photo_url %}
+              <img class="photo-preview" id="photo-preview" src="{{ candidate.photo_url }}" alt="">
+            {% else %}
+              <div class="photo-preview-placeholder" id="photo-preview-placeholder">👤</div>
+            {% endif %}
+            {% if candidate and candidate.photo_url %}
+            <label style="display:flex;align-items:center;gap:5px;margin-top:6px;font-size:0.72rem;color:#dc2626;cursor:pointer;">
+              <input type="checkbox" name="remove_photo" value="1"
+                     onchange="if(this.checked){document.getElementById('photo-preview').style.opacity='0.3';}else{document.getElementById('photo-preview').style.opacity='1';}">
+              Remove photo
+            </label>
+            {% endif %}
+          </div>
+          <div class="photo-input-area">
+            <label class="file-pick-btn" for="photo-input">&#128247; Choose photo</label>
+            <input type="file" id="photo-input" name="photo" accept="image/*" style="display:none"
+                   onchange="previewPhoto(this)">
+            <div class="hint" style="margin-top:6px">JPG, PNG, WEBP accepted. This will appear on your card.</div>
+          </div>
+        </div>
+
+        <div class="form-row single">
+          <div class="form-group">
+            <label for="pdf-input">&#128196; Biodata PDF <span style="font-size:0.74rem;color:var(--muted);font-weight:400">(optional)</span></label>
+            <input type="file" id="pdf-input" name="pdf" accept=".pdf">
+            <div class="hint">Upload your full biodata document. Visible to all users.</div>
+            {% if candidate and candidate.pdf_url %}
+              <div style="margin-top:6px;font-size:0.78rem;color:#16a34a">&#10003; PDF already uploaded — upload again to replace it.</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {# ── PERSONAL ── #}
+      <div class="form-section">
+        <div class="form-section-title">Personal Details</div>
+
+        {# name — always shown (can't be hidden) #}
+        {% set fc_name = (field_config or {}).get('name', 'mandatory') %}
+        {% if fc_name != 'hidden' %}
+        <div class="form-row">
+          <div class="form-group">
+            <label for="name">Full name {% if fc_name == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="text" id="name" name="name" {% if fc_name == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('name', '') or '' }}">
+          </div>
+          {# date_of_birth #}
+          {% set fc_dob = (field_config or {}).get('date_of_birth', 'mandatory') %}
+          {% if fc_dob != 'hidden' %}
+          <div class="form-group">
+            <label for="date_of_birth">Date of birth {% if fc_dob == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="text" id="date_of_birth" name="date_of_birth" placeholder="DD/MM/YYYY"
+                   {% if fc_dob == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('date_of_birth', '') or '' }}">
+            <div class="hint">Format: DD/MM/YYYY e.g. 15/08/1999</div>
+          </div>
+          {% else %}<div class="form-group"></div>{% endif %}
+        </div>
+        {% endif %}
+
+        {# gender + height #}
+        {% set fc_gender = (field_config or {}).get('gender', 'mandatory') %}
+        {% set fc_height = (field_config or {}).get('height', 'mandatory') %}
+        {% if fc_gender != 'hidden' or fc_height != 'hidden' %}
+        <div class="form-row">
+          {% if fc_gender != 'hidden' %}
+          <div class="form-group">
+            <label for="gender">Gender {% if fc_gender == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            {% set gv = (form_data or candidate or {}).get('gender', '') or '' %}
+            <select id="gender" name="gender" {% if fc_gender == 'mandatory' %}required{% endif %}>
+              <option value="">— Select —</option>
+              <option value="Female" {% if gv == 'Female' %}selected{% endif %}>Female</option>
+              <option value="Male"   {% if gv == 'Male'   %}selected{% endif %}>Male</option>
+              <option value="Other"  {% if gv == 'Other'  %}selected{% endif %}>Other</option>
+            </select>
+          </div>
+          {% else %}<div class="form-group"></div>{% endif %}
+          {% if fc_height != 'hidden' %}
+          <div class="form-group">
+            <label for="height">Height {% if fc_height == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="text" id="height" name="height" placeholder="e.g. 5'4&quot; or 163 cm"
+                   {% if fc_height == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('height', '') or '' }}">
+          </div>
+          {% else %}<div class="form-group"></div>{% endif %}
+        </div>
+        {% endif %}
+
+        {# weight + marital_status #}
+        {% set fc_weight = (field_config or {}).get('weight', 'optional') %}
+        {% set fc_ms = (field_config or {}).get('marital_status', 'optional') %}
+        {% if fc_weight != 'hidden' or fc_ms != 'hidden' %}
+        <div class="form-row">
+          {% if fc_weight != 'hidden' %}
+          <div class="form-group">
+            <label for="weight">Weight {% if fc_weight == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="text" id="weight" name="weight" placeholder="e.g. 55 kg"
+                   {% if fc_weight == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('weight', '') or '' }}">
+          </div>
+          {% else %}<div class="form-group"></div>{% endif %}
+          {% if fc_ms != 'hidden' %}
+          <div class="form-group">
+            <label for="marital_status">Marital status {% if fc_ms == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            {% set msv = (form_data or candidate or {}).get('marital_status', '') or '' %}
+            <select id="marital_status" name="marital_status" {% if fc_ms == 'mandatory' %}required{% endif %}>
+              <option value="">— Select —</option>
+              {% for opt in ['Never Married','Divorced','Widowed','Awaiting Divorce'] %}
+              <option value="{{ opt }}" {% if msv == opt %}selected{% endif %}>{{ opt }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% else %}<div class="form-group"></div>{% endif %}
+        </div>
+        {% endif %}
+
+        {# blood_group + mother_tongue #}
+        {% set fc_bg = (field_config or {}).get('blood_group', 'optional') %}
+        {% set fc_mt = (field_config or {}).get('mother_tongue', 'optional') %}
+        {% if fc_bg != 'hidden' or fc_mt != 'hidden' %}
+        <div class="form-row">
+          {% if fc_bg != 'hidden' %}
+          <div class="form-group">
+            <label for="blood_group">Blood group {% if fc_bg == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            {% set bgv = (form_data or candidate or {}).get('blood_group', '') or '' %}
+            <select id="blood_group" name="blood_group" {% if fc_bg == 'mandatory' %}required{% endif %}>
+              <option value="">— Select —</option>
+              {% for opt in ['A+','A-','B+','B-','O+','O-','AB+','AB-','Unknown'] %}
+              <option value="{{ opt }}" {% if bgv == opt %}selected{% endif %}>{{ opt }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% else %}<div class="form-group"></div>{% endif %}
+          {% if fc_mt != 'hidden' %}
+          <div class="form-group">
+            <label for="mother_tongue">Mother tongue {% if fc_mt == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="text" id="mother_tongue" name="mother_tongue"
+                   {% if fc_mt == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('mother_tongue', '') or '' }}">
+          </div>
+          {% else %}<div class="form-group"></div>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+
+      {# ── CASTE & RELIGION ── #}
+      {% set fc_caste  = (field_config or {}).get('caste', 'mandatory') %}
+      {% set fc_sc     = (field_config or {}).get('sub_caste', 'optional') %}
+      {% set fc_gotra  = (field_config or {}).get('gotra', 'optional') %}
+      {% set fc_manglik= (field_config or {}).get('manglik', 'optional') %}
+      {% if fc_caste != 'hidden' or fc_sc != 'hidden' or fc_gotra != 'hidden' or fc_manglik != 'hidden' %}
+      <div class="form-section">
+        <div class="form-section-title">Caste &amp; Religion</div>
+        {% if fc_caste != 'hidden' or fc_sc != 'hidden' %}
+        <div class="form-row">
+          {% if fc_caste != 'hidden' %}
+          <div class="form-group">
+            <label for="caste">Caste {% if fc_caste == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="text" id="caste" name="caste"
+                   {% if fc_caste == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('caste', '') or '' }}">
+          </div>
+          {% else %}<div class="form-group"></div>{% endif %}
+          {% if fc_sc != 'hidden' %}
+          <div class="form-group">
+            <label for="sub_caste">Sub-caste {% if fc_sc == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="text" id="sub_caste" name="sub_caste"
+                   {% if fc_sc == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('sub_caste', '') or '' }}">
+          </div>
+          {% else %}<div class="form-group"></div>{% endif %}
+        </div>
+        {% endif %}
+        {% if fc_gotra != 'hidden' or fc_manglik != 'hidden' %}
+        <div class="form-row">
+          {% if fc_gotra != 'hidden' %}
+          <div class="form-group">
+            <label for="gotra">Gotra {% if fc_gotra == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="text" id="gotra" name="gotra"
+                   {% if fc_gotra == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('gotra', '') or '' }}">
+          </div>
+          {% else %}<div class="form-group"></div>{% endif %}
+          {% if fc_manglik != 'hidden' %}
+          <div class="form-group">
+            <label for="manglik">Manglik {% if fc_manglik == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            {% set mkv = (form_data or candidate or {}).get('manglik', '') or '' %}
+            <select id="manglik" name="manglik" {% if fc_manglik == 'mandatory' %}required{% endif %}>
+              <option value="">— Select —</option>
+              {% for opt in ['Yes','No',"Don't know"] %}
+              <option value="{{ opt }}" {% if mkv == opt %}selected{% endif %}>{{ opt }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% else %}<div class="form-group"></div>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {# ── EDUCATION & CAREER ── #}
+      {% set fc_edu  = (field_config or {}).get('education', 'mandatory') %}
+      {% set fc_occ  = (field_config or {}).get('occupation', 'optional') %}
+      {% set fc_jloc = (field_config or {}).get('job_location', 'mandatory') %}
+      {% set fc_sal  = (field_config or {}).get('salary', 'optional') %}
+      {% if fc_edu != 'hidden' or fc_occ != 'hidden' or fc_jloc != 'hidden' or fc_sal != 'hidden' %}
+      <div class="form-section">
+        <div class="form-section-title">Education &amp; Career</div>
+        {% if fc_edu != 'hidden' %}
+        <div class="form-row single">
+          <div class="form-group">
+            <label for="education">Highest education {% if fc_edu == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="text" id="education" name="education"
+                   {% if fc_edu == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('education', '') or '' }}">
+          </div>
+        </div>
+        {% endif %}
+        {% if fc_occ != 'hidden' or fc_jloc != 'hidden' %}
+        <div class="form-row">
+          {% if fc_occ != 'hidden' %}
+          <div class="form-group">
+            <label for="occupation">Occupation / job title {% if fc_occ == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="text" id="occupation" name="occupation"
+                   {% if fc_occ == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('occupation', '') or '' }}">
+          </div>
+          {% else %}<div class="form-group"></div>{% endif %}
+          {% if fc_jloc != 'hidden' %}
+          <div class="form-group">
+            <label for="job_location">Current location {% if fc_jloc == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="text" id="job_location" name="job_location"
+                   {% if fc_jloc == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('job_location', '') or '' }}">
+          </div>
+          {% else %}<div class="form-group"></div>{% endif %}
+        </div>
+        {% endif %}
+        {% if fc_sal != 'hidden' %}
+        <div class="form-row">
+          <div class="form-group">
+            <label for="salary">Annual salary {% if fc_sal == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="text" id="salary" name="salary" placeholder="e.g. 12 LPA (per annum)"
+                   {% if fc_sal == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('salary', '') or '' }}">
+          </div>
+          <div class="form-group"></div>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {# ── LOCATION ── #}
+      {% set fc_city  = (field_config or {}).get('residential_city', 'mandatory') %}
+      {% set fc_state = (field_config or {}).get('state', 'mandatory') %}
+      {% if fc_city != 'hidden' or fc_state != 'hidden' %}
+      <div class="form-section">
+        <div class="form-section-title">Location</div>
+        <div class="form-row">
+          {% if fc_city != 'hidden' %}
+          <div class="form-group">
+            <label for="residential_city">Family city {% if fc_city == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="text" id="residential_city" name="residential_city"
+                   {% if fc_city == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('residential_city', '') or '' }}">
+          </div>
+          {% else %}<div class="form-group"></div>{% endif %}
+          {% if fc_state != 'hidden' %}
+          <div class="form-group">
+            <label for="state">State {% if fc_state == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="text" id="state" name="state"
+                   {% if fc_state == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('state', '') or '' }}">
+          </div>
+          {% else %}<div class="form-group"></div>{% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# ── FAMILY ── #}
+      {% set fc_fn  = (field_config or {}).get('fathers_name', 'optional') %}
+      {% set fc_fc  = (field_config or {}).get('fathers_contact', 'optional') %}
+      {% set fc_fo  = (field_config or {}).get('fathers_occupation', 'optional') %}
+      {% set fc_mn  = (field_config or {}).get('mothers_name', 'optional') %}
+      {% set fc_mc  = (field_config or {}).get('mothers_contact', 'optional') %}
+      {% set fc_mo  = (field_config or {}).get('mothers_occupation', 'optional') %}
+      {% set fc_sib = (field_config or {}).get('siblings', 'optional') %}
+      {% set fc_cc  = (field_config or {}).get('candidate_contact', 'optional') %}
+      {% set fc_ce  = (field_config or {}).get('candidate_email', 'optional') %}
+      {% if fc_fn != 'hidden' or fc_fc != 'hidden' or fc_fo != 'hidden' or fc_mn != 'hidden' or fc_mc != 'hidden' or fc_mo != 'hidden' or fc_sib != 'hidden' or fc_cc != 'hidden' or fc_ce != 'hidden' %}
+      <div class="form-section">
+        <div class="form-section-title">Family &amp; Contact</div>
+        <div class="hint" style="margin-bottom:12px;font-size:0.78rem">Visible to all logged-in users.</div>
+
+        {% if fc_fn != 'hidden' or fc_fc != 'hidden' %}
+        <div class="form-row">
+          {% if fc_fn != 'hidden' %}
+          <div class="form-group">
+            <label for="fathers_name">Father's name {% if fc_fn == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="text" id="fathers_name" name="fathers_name"
+                   {% if fc_fn == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('fathers_name', '') or '' }}">
+          </div>
+          {% else %}<div class="form-group"></div>{% endif %}
+          {% if fc_fc != 'hidden' %}
+          <div class="form-group">
+            <label for="fathers_contact">Father's contact {% if fc_fc == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="tel" id="fathers_contact" name="fathers_contact"
+                   {% if fc_fc == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('fathers_contact', '') or '' }}">
+          </div>
+          {% else %}<div class="form-group"></div>{% endif %}
+        </div>
+        {% endif %}
+
+        {% if fc_fo != 'hidden' %}
+        <div class="form-row">
+          <div class="form-group">
+            <label for="fathers_occupation">Father's occupation {% if fc_fo == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="text" id="fathers_occupation" name="fathers_occupation"
+                   {% if fc_fo == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('fathers_occupation', '') or '' }}">
+          </div>
+          <div class="form-group"></div>
+        </div>
+        {% endif %}
+
+        {% if fc_mn != 'hidden' or fc_mc != 'hidden' %}
+        <div class="form-row">
+          {% if fc_mn != 'hidden' %}
+          <div class="form-group">
+            <label for="mothers_name">Mother's name {% if fc_mn == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="text" id="mothers_name" name="mothers_name"
+                   {% if fc_mn == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('mothers_name', '') or '' }}">
+          </div>
+          {% else %}<div class="form-group"></div>{% endif %}
+          {% if fc_mc != 'hidden' %}
+          <div class="form-group">
+            <label for="mothers_contact">Mother's contact {% if fc_mc == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="tel" id="mothers_contact" name="mothers_contact"
+                   {% if fc_mc == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('mothers_contact', '') or '' }}">
+          </div>
+          {% else %}<div class="form-group"></div>{% endif %}
+        </div>
+        {% endif %}
+
+        {% if fc_mo != 'hidden' %}
+        <div class="form-row">
+          <div class="form-group">
+            <label for="mothers_occupation">Mother's occupation {% if fc_mo == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="text" id="mothers_occupation" name="mothers_occupation"
+                   {% if fc_mo == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('mothers_occupation', '') or '' }}">
+          </div>
+          <div class="form-group"></div>
+        </div>
+        {% endif %}
+
+        {% if fc_sib != 'hidden' %}
+        <div class="form-row single">
+          <div class="form-group">
+            <label for="siblings">Siblings {% if fc_sib == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="text" id="siblings" name="siblings" placeholder="e.g. 1 brother (married), 1 sister"
+                   {% if fc_sib == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('siblings', '') or '' }}">
+          </div>
+        </div>
+        {% endif %}
+
+        {% if fc_cc != 'hidden' or fc_ce != 'hidden' %}
+        <div class="form-row">
+          {% if fc_cc != 'hidden' %}
+          <div class="form-group">
+            <label for="candidate_contact">Your phone number {% if fc_cc == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="tel" id="candidate_contact" name="candidate_contact"
+                   {% if fc_cc == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('candidate_contact', '') or '' }}">
+          </div>
+          {% else %}<div class="form-group"></div>{% endif %}
+          {% if fc_ce != 'hidden' %}
+          <div class="form-group">
+            <label for="candidate_email">Your email {% if fc_ce == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="email" id="candidate_email" name="candidate_email"
+                   {% if fc_ce == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('candidate_email', '') or '' }}">
+          </div>
+          {% else %}<div class="form-group"></div>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {# ── ABOUT ── #}
+      {% set fc_hobbies  = (field_config or {}).get('hobbies', 'optional') %}
+      {% set fc_about_me = (field_config or {}).get('about_me', 'optional') %}
+      {% if fc_hobbies != 'hidden' or fc_about_me != 'hidden' %}
+      <div class="form-section">
+        <div class="form-section-title">About Me</div>
+        {% if fc_hobbies != 'hidden' %}
+        <div class="form-row single">
+          <div class="form-group">
+            <label for="hobbies">Hobbies {% if fc_hobbies == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <input type="text" id="hobbies" name="hobbies"
+                   {% if fc_hobbies == 'mandatory' %}required{% endif %}
+                   value="{{ (form_data or candidate or {}).get('hobbies', '') or '' }}">
+          </div>
+        </div>
+        {% endif %}
+        {% if fc_about_me != 'hidden' %}
+        <div class="form-row single">
+          <div class="form-group">
+            <label for="about_me">About me {% if fc_about_me == 'mandatory' %}<span class="req">*</span>{% endif %}</label>
+            <textarea id="about_me" name="about_me" rows="4"
+                      {% if fc_about_me == 'mandatory' %}required{% endif %}
+                      >{{ (form_data or candidate or {}).get('about_me', '') or '' }}</textarea>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <div class="form-actions">
+        <button class="btn-save" type="submit">&#10003; Save Profile</button>
+        <a class="btn-cancel" href="/profile/me">Cancel</a>
+        {% if candidate %}
+        <button class="btn-delete" type="button"
+                onclick="document.getElementById('confirm-delete').style.display='block';this.style.display='none'">
+          &#128465; Delete my profile
+        </button>
+        {% endif %}
+      </div>
+
+      {% if candidate %}
+      <div class="confirm-delete" id="confirm-delete">
+        <p>&#9888; Are you sure? This will permanently remove your profile from the biodata pool and move your files to trash.</p>
+        <div class="confirm-actions">
+          <form method="POST">
+            <input type="hidden" name="action" value="delete">
+            <button class="btn-confirm-delete" type="submit">Yes, delete my profile</button>
+          </form>
+          <button class="btn-cancel-confirm"
+                  onclick="document.getElementById('confirm-delete').style.display='none';document.querySelector('.btn-delete').style.display=''">
+            Cancel
+          </button>
+        </div>
+      </div>
+      {% endif %}
+
+    </form>
+  </div>
+{% endif %}
+
+</div><!-- /page -->
+
+<script>
+function previewPhoto(input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const ph = document.getElementById('photo-preview-placeholder');
+    let img  = document.getElementById('photo-preview');
+    if (ph) {
+      img = document.createElement('img');
+      img.id        = 'photo-preview';
+      img.className = 'photo-preview';
+      img.alt       = '';
+      ph.replaceWith(img);
+    }
+    if (img) img.src = e.target.result;
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+</script>
+</body>
+</html>

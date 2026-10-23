@@ -1,0 +1,55 @@
+# ── Secrets & config ──────────────────────────────────────────────────────
+.env
+
+# ── Database files ─────────────────────────────────────────────────────────
+*.db
+*.db-shm
+*.db-wal
+
+# ── Candidate data (PDFs, photos, processed folders) ──────────────────────
+# These are large binary files and contain personal data — never commit them
+processed/
+inbox/
+failed/
+trash/
+photos/
+backups/
+
+# ── Logs ──────────────────────────────────────────────────────────────────
+*.log
+processing.log
+
+# ── Python ────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+env/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── macOS ─────────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# ── Screenshots (OpenCode internal) ───────────────────────────────────────
+.openchamber/
+
+# ── Editor ────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Misc ──────────────────────────────────────────────────────────────────
+can browse: 287

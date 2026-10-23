@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Edit: {{ c.name or c.folder_stem }}</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --bg:#f5f5f7; --surface:#fff; --border:#e0e0e0; --primary:#2563eb; --primary-h:#1d4ed8; --text:#1a1a1a; --muted:#6b7280; --radius:10px; --shadow:0 2px 8px rgba(0,0,0,0.07); }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .back-btn { font-size: 0.82rem; color: var(--muted); text-decoration: none; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; }
+  .back-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .header h1 { font-size: 1.05rem; font-weight: 700; color: #dc2626; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .user-badge { font-size: 0.78rem; color: var(--muted); font-weight: 500; padding: 3px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 99px; }
+  .logout-link { font-size: 0.78rem; color: var(--muted); text-decoration: none; padding: 3px 8px; border: 1px solid var(--border); border-radius: 99px; background: var(--bg); }
+  .logout-link:hover { color: #dc2626; border-color: #fca5a5; }
+
+  .page { max-width: 720px; margin: 28px auto; padding: 0 20px 60px; }
+
+  .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; }
+  .form-top { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .photo-col { flex-shrink: 0; }
+  .profile-photo { width: 80px; height: 96px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); display: block; }
+  .profile-photo-placeholder { width: 80px; height: 96px; border-radius: 8px; border: 2px dashed var(--border); background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; color: var(--muted); }
+  .photo-hint { font-size: 0.72rem; color: var(--muted); margin-top: 6px; text-align: center; }
+  .form-top-body { flex: 1; min-width: 0; }
+  .stem-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; }
+  .stem-value { font-size: 0.82rem; font-family: monospace; color: var(--text); background: var(--bg); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); word-break: break-all; }
+  .owner-note { font-size: 0.78rem; color: var(--muted); margin-top: 8px; }
+
+  .form-section { margin-bottom: 20px; }
+  .form-section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; margin-bottom: 12px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .form-row.single { grid-template-columns: 1fr; }
+  @media (max-width: 520px) { .form-row { grid-template-columns: 1fr; } }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group label { font-size: 0.78rem; font-weight: 500; color: var(--text); }
+  .form-group label .req { color: #dc2626; margin-left: 2px; }
+  .form-group input, .form-group select {
+    padding: 7px 10px; border: 1px solid var(--border); border-radius: 7px;
+    font-size: 0.85rem; color: var(--text); background: var(--bg);
+    outline: none; transition: border-color 0.15s;
+  }
+  .form-group input:focus, .form-group select:focus { border-color: var(--primary); background: #fff; }
+
+  .file-row { display: flex; gap: 12px; align-items: center; }
+  .file-label { font-size: 0.8rem; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 6px 12px; cursor: pointer; display: inline-block; }
+  .file-label:hover { border-color: var(--primary); color: var(--primary); }
+
+  .error-box { background: #fee2e2; border: 1px solid #fca5a5; color: #dc2626; border-radius: 8px; padding: 10px 14px; font-size: 0.83rem; margin-bottom: 16px; }
+
+  .form-actions { display: flex; gap: 10px; align-items: center; padding-top: 8px; flex-wrap: wrap; }
+  .btn-save { background: var(--primary); color: #fff; border: none; border-radius: 8px; padding: 9px 24px; font-size: 0.88rem; font-weight: 600; cursor: pointer; }
+  .btn-save:hover { background: var(--primary-h); }
+  .btn-cancel { font-size: 0.82rem; color: var(--muted); text-decoration: none; padding: 9px 14px; }
+  .btn-cancel:hover { color: var(--text); }
+  .btn-delete { margin-left: auto; background: none; border: 1px solid #fca5a5; color: #dc2626; border-radius: 8px; padding: 9px 16px; font-size: 0.82rem; cursor: pointer; }
+  .btn-delete:hover { background: #fee2e2; border-color: #dc2626; }
+
+  .confirm-delete { display: none; background: #fff0f0; border: 1px solid #fca5a5; border-radius: 8px; padding: 14px; margin-top: 12px; }
+  .confirm-delete p { font-size: 0.85rem; color: #dc2626; font-weight: 500; margin-bottom: 10px; }
+  .confirm-actions { display: flex; gap: 8px; }
+  .btn-confirm-delete { background: #dc2626; color: #fff; border: none; border-radius: 7px; padding: 7px 16px; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+  .btn-cancel-confirm { background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 7px 14px; font-size: 0.82rem; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a class="back-btn" href="/admin/candidates">&#8592; Candidates</a>
+  <h1>&#9760; Edit: {{ c.name or c.folder_stem }}</h1>
+  <div class="header-right">
+    <span class="user-badge">{{ current_user.username }}</span>
+    <a class="logout-link" href="/logout">Sign out</a>
+  </div>
+</div>
+
+<div class="page">
+  <div class="form-card">
+
+    <!-- Top: photo + meta -->
+    <div class="form-top">
+      <div class="photo-col">
+        {% if c.photo_url %}
+          <img class="profile-photo" id="photo-preview" src="{{ c.photo_url }}" alt="">
+        {% else %}
+          <div class="profile-photo-placeholder" id="photo-preview-placeholder">👤</div>
+        {% endif %}
+        <div class="photo-hint">Click below to change</div>
+        {% if c.photo_url %}
+        <label style="display:flex;align-items:center;gap:5px;margin-top:6px;font-size:0.72rem;color:#dc2626;cursor:pointer;">
+          <input type="checkbox" name="remove_photo" value="1"
+                 onchange="if(this.checked){document.getElementById('photo-preview').style.opacity='0.3';}else{document.getElementById('photo-preview').style.opacity='1';}">
+          Remove photo
+        </label>
+        {% endif %}
+      </div>
+      <div class="form-top-body">
+        <div class="stem-label">Folder stem (ID)</div>
+        <div class="stem-value">{{ c.folder_stem }}</div>
+        <div class="owner-note">
+          {% if c.created_by_user_id %}
+            Owner: user #{{ c.created_by_user_id }}
+            <a href="/admin/user/{{ c.created_by_user_id }}" style="color:var(--primary);font-size:0.75rem;margin-left:4px">view &#8250;</a>
+          {% else %}
+            Owner: admin (inbox)
+          {% endif %}
+        </div>
+        {% if c.pdf_url %}
+          <a href="{{ c.pdf_url }}" target="_blank" style="display:inline-block;margin-top:8px;font-size:0.78rem;color:var(--primary)">&#128196; View PDF</a>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if error %}
+    <div class="error-box">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data" autocomplete="off" id="edit-form">
+      <input type="hidden" name="action" value="save">
+
+      <!-- Photo + PDF uploads -->
+      <div class="form-section">
+        <div class="form-section-title">Photo &amp; PDF</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Photo</label>
+            <div class="file-row">
+              <label class="file-label" for="photo-input">&#128247; Choose photo</label>
+              <input type="file" id="photo-input" name="photo" accept="image/*" style="display:none" onchange="previewPhoto(this)">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Biodata PDF</label>
+            <div class="file-row">
+              <input type="file" name="pdf" accept=".pdf" style="font-size:0.8rem">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Basic -->
+      <div class="form-section">
+        <div class="form-section-title">Basic Details</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full name <span class="req">*</span></label>
+            <input type="text" name="name" required value="{{ c.name or '' }}">
+          </div>
+          <div class="form-group">
+            <label>Date of birth</label>
+            <input type="text" name="date_of_birth" placeholder="DD/MM/YYYY" value="{{ c.date_of_birth or '' }}">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Gender</label>
+            <select name="gender">
+              <option value="">— Select —</option>
+              <option value="Female" {% if c.gender == 'Female' %}selected{% endif %}>Female</option>
+              <option value="Male"   {% if c.gender == 'Male'   %}selected{% endif %}>Male</option>
+              <option value="Other"  {% if c.gender == 'Other'  %}selected{% endif %}>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Height</label>
+            <input type="text" name="height" placeholder="5'4&quot; or 163 cm" value="{{ c.height or '' }}">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Weight</label>
+            <input type="text" name="weight" placeholder="55 kg" value="{{ c.weight or '' }}">
+          </div>
+          <div class="form-group">
+            <label>Caste</label>
+            <input type="text" name="caste" value="{{ c.caste or '' }}">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Sub-caste</label>
+            <input type="text" name="sub_caste" value="{{ c.sub_caste or '' }}">
+          </div>
+          <div class="form-group">
+            <label>Family city</label>
+            <input type="text" name="residential_city" value="{{ c.residential_city or '' }}">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>State</label>
+            <input type="text" name="state" value="{{ c.state or '' }}">
+          </div>
+          <div class="form-group">
+            <label>Job location</label>
+            <input type="text" name="job_location" value="{{ c.job_location or '' }}">
+          </div>
+        </div>
+      </div>
+
+      <!-- Education & Work -->
+      <div class="form-section">
+        <div class="form-section-title">Education &amp; Work</div>
+        <div class="form-row single">
+          <div class="form-group">
+            <label>Education</label>
+            <input type="text" name="education" value="{{ c.education or '' }}">
+          </div>
+        </div>
+        <div class="form-row single">
+          <div class="form-group">
+            <label>Occupation</label>
+            <input type="text" name="occupation" value="{{ c.occupation or '' }}">
+          </div>
+        </div>
+      </div>
+
+      <!-- Contact -->
+      <div class="form-section">
+        <div class="form-section-title">Contact</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="text" name="candidate_contact" value="{{ c.candidate_contact or '' }}">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" name="candidate_email" value="{{ c.candidate_email or '' }}">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Father's name</label>
+            <input type="text" name="fathers_name" value="{{ c.fathers_name or '' }}">
+          </div>
+          <div class="form-group">
+            <label>Father's contact</label>
+            <input type="text" name="fathers_contact" value="{{ c.fathers_contact or '' }}">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Mother's name</label>
+            <input type="text" name="mothers_name" value="{{ c.mothers_name or '' }}">
+          </div>
+          <div class="form-group">
+            <label>Mother's contact</label>
+            <input type="text" name="mothers_contact" value="{{ c.mothers_contact or '' }}">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Father's occupation</label>
+            <input type="text" name="fathers_occupation" value="{{ c.fathers_occupation or '' }}">
+          </div>
+          <div class="form-group">
+            <label>Mother's occupation</label>
+            <input type="text" name="mothers_occupation" value="{{ c.mothers_occupation or '' }}">
+          </div>
+        </div>
+        <div class="form-row single">
+          <div class="form-group">
+            <label>Siblings</label>
+            <input type="text" name="siblings" placeholder="e.g. 1 brother (married), 1 sister" value="{{ c.siblings or '' }}">
+          </div>
+        </div>
+      </div>
+
+      <!-- New fields -->
+      <div class="form-section">
+        <div class="form-section-title">Additional Details</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Marital status</label>
+            <select name="marital_status">
+              <option value="">— Select —</option>
+              {% for opt in ['Never Married','Divorced','Widowed','Awaiting Divorce'] %}
+              <option value="{{ opt }}" {% if c.marital_status == opt %}selected{% endif %}>{{ opt }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Blood group</label>
+            <select name="blood_group">
+              <option value="">— Select —</option>
+              {% for opt in ['A+','A-','B+','B-','O+','O-','AB+','AB-','Unknown'] %}
+              <option value="{{ opt }}" {% if c.blood_group == opt %}selected{% endif %}>{{ opt }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Manglik</label>
+            <select name="manglik">
+              <option value="">— Select —</option>
+              {% for opt in ['Yes','No',"Don't know"] %}
+              <option value="{{ opt }}" {% if c.manglik == opt %}selected{% endif %}>{{ opt }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Gotra</label>
+            <input type="text" name="gotra" value="{{ c.gotra or '' }}">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Mother tongue</label>
+            <input type="text" name="mother_tongue" value="{{ c.mother_tongue or '' }}">
+          </div>
+          <div class="form-group">
+            <label>Annual salary</label>
+            <input type="text" name="salary" placeholder="e.g. 12 LPA (per annum)" value="{{ c.salary or '' }}">
+          </div>
+        </div>
+        <div class="form-row single">
+          <div class="form-group">
+            <label>Hobbies</label>
+            <input type="text" name="hobbies" value="{{ c.hobbies or '' }}">
+          </div>
+        </div>
+        <div class="form-row single">
+          <div class="form-group">
+            <label>About me</label>
+            <textarea name="about_me" rows="3" style="resize:vertical;width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:0.85rem;font-family:inherit;outline:none;">{{ c.about_me or '' }}</textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn-save" type="submit">&#10003; Save Changes</button>
+        <a class="btn-cancel" href="/admin/candidates">Cancel</a>
+        <button class="btn-delete" type="button"
+                onclick="document.getElementById('confirm-delete').style.display='block';this.style.display='none'">
+          &#128465; Delete
+        </button>
+      </div>
+
+    </form>
+
+    <!-- Delete confirmation (separate form) -->
+    <div class="confirm-delete" id="confirm-delete">
+      <p>&#9888; This will permanently delete the candidate and move their folder to trash. Cannot be undone.</p>
+      <div class="confirm-actions">
+        <form method="POST">
+          <input type="hidden" name="action" value="delete">
+          <button class="btn-confirm-delete" type="submit">Yes, delete</button>
+        </form>
+        <button class="btn-cancel-confirm"
+                onclick="document.getElementById('confirm-delete').style.display='none';document.querySelector('.btn-delete').style.display=''">
+          Cancel
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function previewPhoto(input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const ph = document.getElementById('photo-preview-placeholder');
+    let img  = document.getElementById('photo-preview');
+    if (ph) {
+      img = document.createElement('img');
+      img.id = 'photo-preview';
+      img.className = 'profile-photo';
+      img.alt = '';
+      ph.replaceWith(img);
+    }
+    if (img) img.src = e.target.result;
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+</script>
+</body>
+</html>

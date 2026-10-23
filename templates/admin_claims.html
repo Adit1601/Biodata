@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Profile Claims</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --bg:#f5f5f7; --surface:#fff; --border:#e0e0e0; --primary:#2563eb; --text:#1a1a1a; --muted:#6b7280; --radius:10px; --shadow:0 2px 8px rgba(0,0,0,0.07); }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .back-btn { font-size: 0.82rem; color: var(--muted); text-decoration: none; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; }
+  .back-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .header h1 { font-size: 1.1rem; font-weight: 700; color: #dc2626; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .user-badge { font-size: 0.78rem; color: var(--muted); font-weight: 500; padding: 3px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 99px; }
+  .logout-link { font-size: 0.78rem; color: var(--muted); text-decoration: none; padding: 3px 8px; border: 1px solid var(--border); border-radius: 99px; background: var(--bg); }
+  .logout-link:hover { color: #dc2626; border-color: #fca5a5; }
+
+  .page { max-width: 860px; margin: 32px auto; padding: 0 20px 60px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 2px solid var(--border); }
+  .tab { padding: 8px 18px; font-size: 0.84rem; font-weight: 500; color: var(--muted); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: color 0.12s, border-color 0.12s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .badge { display: inline-flex; align-items: center; justify-content: center; background: #dc2626; color: #fff; font-size: 0.65rem; font-weight: 700; border-radius: 99px; padding: 1px 6px; margin-left: 5px; }
+
+  /* Claim cards */
+  .claim-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 14px; overflow: hidden; }
+  .claim-header { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+  .claim-photo { width: 52px; height: 64px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); flex-shrink: 0; }
+  .claim-photo-placeholder { width: 52px; height: 64px; border-radius: 6px; border: 2px dashed var(--border); background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0; }
+  .claim-info { flex: 1; min-width: 0; }
+  .claim-candidate { font-size: 0.95rem; font-weight: 700; margin-bottom: 2px; }
+  .claim-meta { font-size: 0.78rem; color: var(--muted); }
+  .claim-user { font-size: 0.82rem; color: var(--text); margin-top: 4px; }
+  .claim-user strong { color: var(--primary); }
+  .claim-date { font-size: 0.72rem; color: var(--muted); }
+
+  .status-badge { font-size: 0.7rem; font-weight: 700; border-radius: 99px; padding: 3px 10px; white-space: nowrap; }
+  .status-pending  { background: #fef3c7; color: #b45309; }
+  .status-accepted { background: #dcfce7; color: #16a34a; }
+  .status-rejected { background: #fee2e2; color: #dc2626; }
+
+  .claim-actions { padding: 12px 18px; display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+  .note-input { flex: 1; min-width: 180px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 0.83rem; color: var(--text); background: var(--bg); outline: none; }
+  .note-input:focus { border-color: var(--primary); background: #fff; }
+  .btn { font-size: 0.82rem; font-weight: 500; border-radius: 8px; padding: 7px 16px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; transition: all 0.12s; white-space: nowrap; }
+  .btn-accept { color: #16a34a; border-color: #86efac; background: #f0fdf4; }
+  .btn-accept:hover { background: #dcfce7; border-color: #16a34a; }
+  .btn-reject { color: #dc2626; border-color: #fca5a5; background: #fff0f0; }
+  .btn-reject:hover { background: #fee2e2; border-color: #dc2626; }
+
+  .reviewed-note { padding: 10px 18px 14px; font-size: 0.78rem; color: var(--muted); }
+  .reviewed-note strong { color: var(--text); }
+
+  .empty { text-align: center; color: var(--muted); padding: 60px 20px; font-size: 0.9rem; }
+  .user-link { font-size: 0.78rem; color: var(--primary); text-decoration: none; }
+  .user-link:hover { text-decoration: underline; }
+  .warning-note { font-size: 0.75rem; color: #b45309; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 6px; padding: 5px 10px; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a class="back-btn" href="/admin">&#8592; All Users</a>
+  <h1>&#9760; Profile Claims</h1>
+  <div class="header-right">
+    <span class="user-badge">{{ current_user.username }}</span>
+    <a class="logout-link" href="/logout">Sign out</a>
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="tabs">
+    <a class="tab {% if tab == 'pending' %}active{% endif %}" href="/admin/claims?tab=pending">
+      Pending{% if pending_count > 0 %}<span class="badge">{{ pending_count }}</span>{% endif %}
+    </a>
+    <a class="tab {% if tab == 'accepted' %}active{% endif %}" href="/admin/claims?tab=accepted">Accepted</a>
+    <a class="tab {% if tab == 'rejected' %}active{% endif %}" href="/admin/claims?tab=rejected">Rejected</a>
+    <a class="tab {% if tab == 'all' %}active{% endif %}" href="/admin/claims?tab=all">All</a>
+  </div>
+
+  {% if not claims %}
+  <div class="empty">No {{ tab }} claims.</div>
+  {% endif %}
+
+  {% for cl in claims %}
+  <div class="claim-card">
+    <div class="claim-header">
+      {% if cl.photo_url %}
+        <img class="claim-photo" src="{{ cl.photo_url }}" alt="">
+      {% else %}
+        <div class="claim-photo-placeholder">👤</div>
+      {% endif %}
+
+      <div class="claim-info">
+        <div class="claim-candidate">
+          {{ cl.candidate_name or '(unnamed)' }}
+          {% if cl.date_of_birth %}<span style="font-weight:400;color:var(--muted)"> · {{ cl.date_of_birth }}</span>{% endif %}
+        </div>
+        <div class="claim-meta">Candidate #{{ cl.candidate_id }}</div>
+        <div class="claim-user">
+          Claimed by <strong>{{ cl.username }}</strong>
+          <a class="user-link" href="/admin/user/{{ cl.user_id }}">(view user)</a>
+        </div>
+        <div class="claim-date">Submitted {{ cl.created_at[:10] }}</div>
+      </div>
+
+      <span class="status-badge status-{{ cl.status }}">{{ cl.status }}</span>
+    </div>
+
+    {% if cl.status == 'pending' %}
+    <div class="claim-actions">
+      <form method="POST" action="/admin/claims/{{ cl.id }}" style="display:contents">
+        <input type="hidden" name="tab" value="{{ tab }}">
+        <input class="note-input" type="text" name="admin_note" placeholder="Optional note to attach…" autocomplete="off">
+        <button class="btn btn-accept" name="action" value="accept"
+          onclick="return confirm('Accept this claim? This will link the profile to {{ cl.username }}.')">
+          &#10003; Accept
+        </button>
+        <button class="btn btn-reject" name="action" value="reject">
+          &#10005; Reject
+        </button>
+      </form>
+    </div>
+    {% else %}
+    <div class="reviewed-note">
+      Reviewed {{ cl.reviewed_at[:10] if cl.reviewed_at else '—' }}
+      {% if cl.admin_note %} · <strong>Note:</strong> {{ cl.admin_note }}{% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+</div>
+</body>
+</html>

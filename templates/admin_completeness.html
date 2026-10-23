@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Profile Completeness</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --bg:#f5f5f7; --surface:#fff; --border:#e0e0e0; --primary:#2563eb; --primary-h:#1d4ed8; --text:#1a1a1a; --muted:#6b7280; --radius:10px; --shadow:0 2px 8px rgba(0,0,0,0.07); }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ── HEADER ── */
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .back-btn { font-size: 0.82rem; color: var(--muted); text-decoration: none; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; white-space: nowrap; }
+  .back-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .header h1 { font-size: 1.1rem; font-weight: 700; color: #dc2626; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .user-badge { font-size: 0.78rem; color: var(--muted); font-weight: 500; padding: 3px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 99px; }
+  .logout-link { font-size: 0.78rem; color: var(--muted); text-decoration: none; padding: 3px 8px; border: 1px solid var(--border); border-radius: 99px; background: var(--bg); }
+  .logout-link:hover { color: #dc2626; border-color: #fca5a5; }
+
+  .page { max-width: 100%; padding: 20px 24px 60px; }
+
+  /* ── STAT STRIP ── */
+  .stat-strip { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 18px; display: flex; flex-direction: column; gap: 2px; min-width: 130px; box-shadow: var(--shadow); }
+  .stat-card .num { font-size: 1.5rem; font-weight: 800; }
+  .stat-card .lbl { font-size: 0.72rem; color: var(--muted); font-weight: 500; }
+  .stat-card.green .num { color: #16a34a; }
+  .stat-card.red   .num { color: #dc2626; }
+  .stat-card.blue  .num { color: var(--primary); }
+
+  /* ── CHIP FILTER PANEL ── */
+  .chip-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 14px; overflow: hidden; }
+  .chip-panel-header { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--bg); }
+  .chip-panel-title { font-size: 0.78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; flex: 1; }
+  .chip-clear-btn { font-size: 0.72rem; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 6px; padding: 3px 9px; cursor: pointer; transition: all 0.12s; white-space: nowrap; }
+  .chip-clear-btn:hover { color: #dc2626; border-color: #fca5a5; }
+  .chip-configure-btn { font-size: 0.72rem; color: var(--primary); background: none; border: 1px solid #bfdbfe; border-radius: 6px; padding: 3px 9px; cursor: pointer; transition: all 0.12s; white-space: nowrap; }
+  .chip-configure-btn:hover { background: #eff6ff; }
+
+  .chip-area { padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 7px; min-height: 44px; }
+  .chip-area-empty { padding: 14px 18px; font-size: 0.82rem; color: var(--muted); font-style: italic; }
+
+  .field-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 0.76rem; font-weight: 500;
+    border: 1px solid var(--border); border-radius: 99px;
+    padding: 4px 11px; background: var(--surface);
+    cursor: pointer; user-select: none;
+    transition: all 0.12s;
+    white-space: nowrap;
+  }
+  .field-chip:hover { border-color: #93c5fd; background: #f0f9ff; }
+  .field-chip.active {
+    background: #dbeafe; border-color: var(--primary); color: var(--primary);
+    font-weight: 700;
+  }
+  .field-chip.active:hover { background: #bfdbfe; }
+  .chip-count {
+    font-size: 0.68rem; font-weight: 700;
+    background: #fee2e2; color: #dc2626;
+    border-radius: 99px; padding: 1px 6px; min-width: 20px; text-align: center;
+  }
+  .field-chip.active .chip-count { background: var(--primary); color: #fff; }
+  .chip-count.zero { background: #f3f4f6; color: var(--muted); }
+
+  /* ── CONFIGURE OVERLAY ── */
+  .configure-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:500; align-items:center; justify-content:center; backdrop-filter:blur(2px); }
+  .configure-overlay.open { display:flex; }
+  .configure-modal { background:var(--surface); border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,0.22); width:min(560px,94vw); max-height:80vh; display:flex; flex-direction:column; overflow:hidden; }
+  .configure-modal-header { display:flex; align-items:center; gap:10px; padding:16px 20px; border-bottom:1px solid var(--border); }
+  .configure-modal-header h2 { font-size:0.95rem; font-weight:700; flex:1; }
+  .configure-modal-close { background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--muted); padding:2px 6px; border-radius:6px; }
+  .configure-modal-close:hover { color:var(--text); background:var(--bg); }
+  .configure-modal-body { overflow-y:auto; padding:14px 20px; flex:1; }
+  .configure-modal-footer { padding:12px 20px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end; background:var(--bg); }
+
+  .group-title { font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:var(--muted); margin:14px 0 6px; }
+  .group-title:first-child { margin-top:0; }
+  .configure-field-row { display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid #f3f4f6; }
+  .configure-field-row:last-child { border-bottom:none; }
+  .configure-field-row label { flex:1; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; gap:8px; }
+  .missing-pill { font-size:0.68rem; font-weight:700; background:#fee2e2; color:#dc2626; border-radius:99px; padding:1px 7px; }
+  .missing-pill.zero { background:#f3f4f6; color:var(--muted); }
+  .toggle-switch { position:relative; width:34px; height:20px; flex-shrink:0; }
+  .toggle-switch input { opacity:0; width:0; height:0; position:absolute; }
+  .toggle-slider { position:absolute; inset:0; background:#d1d5db; border-radius:99px; cursor:pointer; transition:background 0.2s; }
+  .toggle-slider::before { content:''; position:absolute; width:14px; height:14px; left:3px; top:3px; background:#fff; border-radius:50%; transition:transform 0.2s; }
+  .toggle-switch input:checked + .toggle-slider { background:var(--primary); }
+  .toggle-switch input:checked + .toggle-slider::before { transform:translateX(14px); }
+
+  .btn-primary { background:var(--primary); color:#fff; border:none; border-radius:8px; padding:8px 20px; font-size:0.82rem; font-weight:700; cursor:pointer; transition:background 0.12s; }
+  .btn-primary:hover { background:var(--primary-h); }
+  .btn-ghost { background:var(--surface); color:var(--muted); border:1px solid var(--border); border-radius:8px; padding:8px 16px; font-size:0.82rem; cursor:pointer; }
+  .btn-ghost:hover { border-color:var(--primary); color:var(--primary); }
+  .btn-sm { font-size:0.72rem; padding:4px 12px; }
+
+  /* ── TOOLBAR ── */
+  .toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+  .toolbar select, .toolbar input[type="text"] {
+    font-size:0.82rem; padding:7px 10px; border:1px solid var(--border);
+    border-radius:7px; background:var(--surface); color:var(--text); outline:none;
+  }
+  .toolbar select:focus, .toolbar input:focus { border-color:var(--primary); }
+  .result-count { margin-left:auto; font-size:0.8rem; color:var(--muted); white-space:nowrap; }
+  .result-count strong { color:var(--text); }
+
+  /* active-chips summary */
+  .active-filter-bar { display:none; align-items:center; gap:7px; margin-bottom:12px; font-size:0.79rem; flex-wrap:wrap; }
+  .active-filter-bar.visible { display:flex; }
+  .active-filter-bar span { color:var(--muted); }
+  .active-chip-tag { display:inline-flex; align-items:center; gap:4px; background:#dbeafe; color:var(--primary); border-radius:99px; padding:3px 10px; font-size:0.73rem; font-weight:700; }
+  .active-chip-tag button { background:none; border:none; cursor:pointer; color:#93c5fd; font-size:0.8rem; line-height:1; padding:0 0 0 2px; }
+  .active-chip-tag button:hover { color:var(--primary); }
+
+  /* ── TABLE ── */
+  .table-wrap { overflow-x:auto; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow-y:clip; }
+  table { border-collapse:collapse; width:100%; font-size:0.78rem; }
+  thead th {
+    padding:9px 10px; background:var(--bg); border-bottom:2px solid var(--border);
+    font-size:0.68rem; text-transform:uppercase; letter-spacing:0.05em;
+    color:var(--muted); font-weight:700; white-space:nowrap;
+    position:sticky; top:0; z-index:1;
+  }
+  thead th.name-col { text-align:left; min-width:160px; }
+  thead th.sort-col { min-width:70px; cursor:pointer; }
+  thead th.sort-col:hover { color:var(--text); }
+  tbody tr { cursor:pointer; }
+  tbody tr:hover { background:#f0f7ff; }
+  tbody td { padding:7px 10px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  tbody tr:last-child td { border-bottom:none; }
+
+  .candidate-name { color:var(--primary); font-weight:500; }
+
+  .missing-badge { display:inline-block; font-size:0.65rem; font-weight:700; border-radius:99px; padding:2px 8px; }
+  .miss-0    { background:#dcfce7; color:#16a34a; }
+  .miss-low  { background:#fef3c7; color:#b45309; }
+  .miss-high { background:#fee2e2; color:#dc2626; }
+
+  .tick  { color:#16a34a; font-size:1rem; }
+  .cross { color:#dc2626; font-size:0.9rem; font-weight:700; }
+
+  .empty { text-align:center; padding:60px 20px; color:var(--muted); font-size:0.9rem; }
+  .no-results { text-align:center; padding:40px 20px; color:var(--muted); }
+  .no-results strong { display:block; font-size:0.9rem; margin-bottom:4px; color:var(--text); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a class="back-btn" href="/admin">&#8592; Admin</a>
+  <h1>&#9760; Profile Completeness</h1>
+  <div class="header-right">
+    <a class="back-btn" href="/admin/fields">&#9881; Field Settings</a>
+    <span class="user-badge">{{ current_user.username }}</span>
+    <a class="logout-link" href="/logout">Sign out</a>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- ── STAT STRIP ── -->
+  <div class="stat-strip">
+    <div class="stat-card green">
+      <span class="num">{{ complete_count }}</span>
+      <span class="lbl">Complete profiles</span>
+    </div>
+    <div class="stat-card red">
+      <span class="num">{{ incomplete_count }}</span>
+      <span class="lbl">Incomplete profiles</span>
+    </div>
+    <div class="stat-card blue">
+      <span class="num">{{ total_count }}</span>
+      <span class="lbl">Total candidates</span>
+    </div>
+  </div>
+
+  {% if not auditable_fields %}
+  <div class="empty">No fields configured. <a href="/admin/fields" style="color:var(--primary)">Set up field rules →</a></div>
+  {% else %}
+
+  <!-- ── CHIP FILTER PANEL ── -->
+  <div class="chip-panel">
+    <div class="chip-panel-header">
+      <span class="chip-panel-title">&#127381; Filter by missing field</span>
+      <button class="chip-clear-btn" id="chip-clear" onclick="clearChips()" style="display:none">Clear filters</button>
+      <button class="chip-configure-btn" onclick="openConfigure()">&#9881; Configure chips</button>
+    </div>
+    <div class="chip-area" id="chip-area">
+      <!-- Chips rendered by JS from FIELD_DATA -->
+    </div>
+  </div>
+
+  <!-- ── ACTIVE FILTER BAR ── -->
+  <div class="active-filter-bar" id="active-filter-bar">
+    <span>Showing candidates missing:</span>
+    <div id="active-chip-tags"></div>
+  </div>
+
+  <!-- ── TOOLBAR ── -->
+  <div class="toolbar">
+    <select id="filter-status" onchange="applyFilter()">
+      <option value="all">All profiles</option>
+      <option value="incomplete" {% if filter == 'incomplete' %}selected{% endif %}>Missing at least 1 mandatory field</option>
+      <option value="complete"   {% if filter == 'complete'   %}selected{% endif %}>Fully complete</option>
+    </select>
+    <input type="text" id="search-name" placeholder="&#128269; Search name…" oninput="applyFilter()" style="width:200px">
+    <div class="result-count">
+      Showing <strong id="shown-count">0</strong> of <strong>{{ total_count }}</strong>
+    </div>
+  </div>
+
+  <!-- ── TABLE ── -->
+  <div class="table-wrap">
+    <table id="audit-table">
+      <thead>
+        <tr>
+          <th class="name-col">Candidate</th>
+          <th class="sort-col" onclick="sortByMissing()" title="Sort by missing count">Missing ↕</th>
+          {% for key in mandatory_fields %}
+          <th title="{{ field_labels[key] }}">{{ field_labels[key] }}</th>
+          {% endfor %}
+          {% for rule_label in rule_labels %}
+          <th title="{{ rule_label }}">{{ rule_label }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody id="audit-body">
+        {% for row in rows %}
+        <tr
+          data-id="{{ row.id }}"
+          data-missing-count="{{ row.missing_count }}"
+          data-name="{{ (row.name or '') | lower }}"
+          data-missing-fields="{{ row.missing_all | join(',') }}"
+          onclick="window.location='/admin/candidate/{{ row.id }}/edit'"
+        >
+          <td><span class="candidate-name">{{ row.name or '(unnamed)' }}</span></td>
+          <td>
+            {% if row.missing_count == 0 %}
+              <span class="missing-badge miss-0">&#10003; Complete</span>
+            {% elif row.missing_count <= 2 %}
+              <span class="missing-badge miss-low">{{ row.missing_count }} missing</span>
+            {% else %}
+              <span class="missing-badge miss-high">{{ row.missing_count }} missing</span>
+            {% endif %}
+          </td>
+          {% for key in mandatory_fields %}
+          <td style="text-align:center">
+            {% if key in row.missing %}
+              <span class="cross" title="{{ field_labels[key] }} is missing">✗</span>
+            {% else %}
+              <span class="tick">✓</span>
+            {% endif %}
+          </td>
+          {% endfor %}
+          {% for rule_label in rule_labels %}
+          <td style="text-align:center">
+            {% if '__rule__' + rule_label in row.missing %}
+              <span class="cross" title="{{ rule_label }} is missing">✗</span>
+            {% else %}
+              <span class="tick">✓</span>
+            {% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="no-results" id="no-results" style="display:none">
+      <strong>No candidates match this filter.</strong>
+      Try selecting fewer field chips or clearing the search.
+    </div>
+  </div>
+
+  {% endif %}
+</div>
+
+<!-- ── CONFIGURE OVERLAY ── -->
+<div class="configure-overlay" id="configure-overlay" onclick="if(event.target===this)closeConfigure()">
+  <div class="configure-modal">
+    <div class="configure-modal-header">
+      <h2>&#9881; Configure field chips</h2>
+      <button class="configure-modal-close" onclick="closeConfigure()">&#10005;</button>
+    </div>
+    <div class="configure-modal-body" id="configure-body">
+      <!-- populated by JS -->
+    </div>
+    <div class="configure-modal-footer">
+      <button class="btn-ghost" onclick="closeConfigure()">Cancel</button>
+      <button class="btn-primary" onclick="saveChipConfig()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Data injected from server ─────────────────────────────────────────────
+const FIELD_DATA = [
+  {% for f in auditable_fields %}
+  { key: {{ f.key | tojson }}, label: {{ f.label | tojson }}, group: {{ f.group | tojson }}, missing: {{ field_missing_counts[f.key] }} },
+  {% endfor %}
+];
+
+const STORAGE_KEY = 'biodata_completeness_chip_config_v1';
+// Default: show only fields that actually have at least 1 missing AND are non-trivial
+// (fields where 280+ are missing are usually just not-extracted, not actionable)
+const TOTAL = {{ total_count }};
+const DEFAULT_VISIBLE_KEYS = new Set(
+  FIELD_DATA
+    .filter(f => f.missing > 0 && f.missing < TOTAL * 0.98)
+    .map(f => f.key)
+);
+
+// ── State ─────────────────────────────────────────────────────────────────
+let activeChips  = new Set();   // currently toggled chip keys
+let visibleChips = new Set();   // which chips are shown in the chip area
+let sortAsc      = true;
+
+// ── Init ──────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  loadChipConfig();
+  renderChipArea();
+  // Apply URL filter param
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('filter')) {
+    document.getElementById('filter-status').value = params.get('filter');
+  }
+  applyFilter();
+  sortByMissing();  // default: most missing first
+  sortAsc = true;
+});
+
+// ── Chip config persistence ───────────────────────────────────────────────
+function loadChipConfig() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      visibleChips = new Set(saved);
+    } else {
+      visibleChips = new Set(DEFAULT_VISIBLE_KEYS);
+    }
+  } catch(e) {
+    visibleChips = new Set(DEFAULT_VISIBLE_KEYS);
+  }
+  // Remove any keys that no longer exist in FIELD_DATA
+  const allKeys = new Set(FIELD_DATA.map(f => f.key));
+  visibleChips = new Set([...visibleChips].filter(k => allKeys.has(k)));
+}
+
+function saveChipConfigToStorage() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify([...visibleChips]));
+}
+
+// ── Render chip area ──────────────────────────────────────────────────────
+function renderChipArea() {
+  const area = document.getElementById('chip-area');
+  const visible = FIELD_DATA.filter(f => visibleChips.has(f.key));
+
+  if (!visible.length) {
+    area.innerHTML = '<div class="chip-area-empty">No chips visible — click <strong>Configure chips</strong> to add some.</div>';
+    return;
+  }
+
+  // Sort: active first, then by missing count descending
+  visible.sort((a, b) => {
+    const aActive = activeChips.has(a.key) ? 1 : 0;
+    const bActive = activeChips.has(b.key) ? 1 : 0;
+    if (bActive !== aActive) return bActive - aActive;
+    return b.missing - a.missing;
+  });
+
+  area.innerHTML = visible.map(f => {
+    const isActive  = activeChips.has(f.key);
+    const zeroClass = f.missing === 0 ? ' zero' : '';
+    return `<button class="field-chip${isActive ? ' active' : ''}"
+              data-key="${f.key}"
+              onclick="toggleChip('${f.key}')"
+              title="${f.missing} candidate${f.missing !== 1 ? 's' : ''} missing ${f.label}">
+      ${esc(f.label)}
+      <span class="chip-count${zeroClass}">${f.missing}</span>
+    </button>`;
+  }).join('');
+}
+
+function toggleChip(key) {
+  if (activeChips.has(key)) {
+    activeChips.delete(key);
+  } else {
+    activeChips.add(key);
+  }
+  renderChipArea();
+  updateActiveFilterBar();
+  applyFilter();
+}
+
+function clearChips() {
+  activeChips.clear();
+  renderChipArea();
+  updateActiveFilterBar();
+  applyFilter();
+}
+
+function updateActiveFilterBar() {
+  const bar    = document.getElementById('active-filter-bar');
+  const tags   = document.getElementById('active-chip-tags');
+  const clearBtn = document.getElementById('chip-clear');
+
+  if (activeChips.size === 0) {
+    bar.classList.remove('visible');
+    clearBtn.style.display = 'none';
+    return;
+  }
+
+  clearBtn.style.display = '';
+  bar.classList.add('visible');
+  tags.innerHTML = [...activeChips].map(key => {
+    const f = FIELD_DATA.find(x => x.key === key);
+    if (!f) return '';
+    return `<span class="active-chip-tag">
+      ${esc(f.label)}
+      <button onclick="toggleChip('${key}')" title="Remove">&#10005;</button>
+    </span>`;
+  }).join('');
+}
+
+// ── Table filter ──────────────────────────────────────────────────────────
+function applyFilter() {
+  const statusVal = document.getElementById('filter-status').value;
+  const search    = document.getElementById('search-name').value.trim().toLowerCase();
+  const rows      = document.querySelectorAll('#audit-body tr');
+  let shown = 0;
+
+  rows.forEach(tr => {
+    const missingCount  = parseInt(tr.dataset.missingCount || '0');
+    const name          = tr.dataset.name || '';
+    const missingFields = tr.dataset.missingFields
+      ? new Set(tr.dataset.missingFields.split(',').filter(Boolean))
+      : new Set();
+
+    // Status filter
+    const passStatus =
+      statusVal === 'all'
+      || (statusVal === 'incomplete' && missingCount > 0)
+      || (statusVal === 'complete'   && missingCount === 0);
+
+    // Name search
+    const passSearch = !search || name.includes(search);
+
+    // Chip filter: show if candidate is missing ANY of the active chips (OR)
+    const passChips =
+      activeChips.size === 0
+      || [...activeChips].some(k => missingFields.has(k));
+
+    const show = passStatus && passSearch && passChips;
+    tr.style.display = show ? '' : 'none';
+    if (show) shown++;
+  });
+
+  document.getElementById('shown-count').textContent = shown;
+  document.getElementById('no-results').style.display = shown === 0 ? '' : 'none';
+}
+
+// ── Sort ──────────────────────────────────────────────────────────────────
+function sortByMissing() {
+  const tbody = document.getElementById('audit-body');
+  const rows  = Array.from(tbody.querySelectorAll('tr'));
+  rows.sort((a, b) => {
+    const ma = parseInt(a.dataset.missingCount || '0');
+    const mb = parseInt(b.dataset.missingCount || '0');
+    return sortAsc ? mb - ma : ma - mb;
+  });
+  sortAsc = !sortAsc;
+  rows.forEach(r => tbody.appendChild(r));
+}
+
+// ── Configure modal ───────────────────────────────────────────────────────
+function openConfigure() {
+  // Group fields
+  const groups = {};
+  FIELD_DATA.forEach(f => {
+    if (!groups[f.group]) groups[f.group] = [];
+    groups[f.group].push(f);
+  });
+
+  let html = '';
+  for (const [group, fields] of Object.entries(groups)) {
+    html += `<div class="group-title">${esc(group)}</div>`;
+    fields.forEach(f => {
+      const checked  = visibleChips.has(f.key) ? 'checked' : '';
+      const zeroClass = f.missing === 0 ? ' zero' : '';
+      html += `<div class="configure-field-row">
+        <label>
+          <span>${esc(f.label)}</span>
+          <span class="missing-pill${zeroClass}">${f.missing} missing</span>
+        </label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="cfg_${f.key}" ${checked}>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>`;
+    });
+  }
+
+  document.getElementById('configure-body').innerHTML = html;
+  document.getElementById('configure-overlay').classList.add('open');
+}
+
+function closeConfigure() {
+  document.getElementById('configure-overlay').classList.remove('open');
+}
+
+function saveChipConfig() {
+  visibleChips = new Set();
+  FIELD_DATA.forEach(f => {
+    const el = document.getElementById('cfg_' + f.key);
+    if (el && el.checked) visibleChips.add(f.key);
+  });
+  saveChipConfigToStorage();
+  closeConfigure();
+  renderChipArea();
+  // Re-apply filter in case an active chip was hidden
+  applyFilter();
+}
+
+// ── Select all / none shortcuts in configure ──────────────────────────────
+function cfgSelectAll()  { FIELD_DATA.forEach(f => { const el=document.getElementById('cfg_'+f.key); if(el) el.checked=true; }); }
+function cfgSelectNone() { FIELD_DATA.forEach(f => { const el=document.getElementById('cfg_'+f.key); if(el) el.checked=false; }); }
+
+// ── Utility ───────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

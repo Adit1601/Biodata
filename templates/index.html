@@ -1,0 +1,2411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Biodata Viewer</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #f5f5f7;
+    --surface:   #ffffff;
+    --border:    #e0e0e0;
+    --primary:   #2563eb;
+    --primary-h: #1d4ed8;
+    --text:      #1a1a1a;
+    --muted:     #6b7280;
+    --chip-bg:   #e8edf7;
+    --chip-text: #2563eb;
+    --sel-border:#2563eb;
+    --sel-bg:    #eff6ff;
+    --radius:    12px;
+    --shadow:    0 2px 8px rgba(0,0,0,0.08);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .header-top h1 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: -0.3px;
+    flex-shrink: 0;
+  }
+  .header-nav { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  .user-badge { font-size: 0.78rem; color: var(--muted); font-weight: 500; padding: 3px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 99px; }
+  .logout-link { font-size: 0.78rem; color: var(--muted); text-decoration: none; padding: 3px 8px; border: 1px solid var(--border); border-radius: 99px; background: var(--bg); transition: color 0.12s; }
+  .logout-link:hover { color: #dc2626; border-color: #fca5a5; }
+  .count-badge {
+    font-size: 0.8rem;
+    color: var(--muted);
+    background: var(--bg);
+    padding: 4px 11px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  /* ── VIEWS DROPDOWN ── */
+  .views-menu { position: relative; }
+  .views-btn {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+  }
+  .views-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .views-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 240px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    z-index: 400;
+    overflow: hidden;
+  }
+  .views-dropdown.open { display: block; }
+  .views-dropdown-header {
+    padding: 10px 14px 8px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  .views-dropdown-empty {
+    padding: 14px;
+    font-size: 0.82rem;
+    color: var(--muted);
+    text-align: center;
+  }
+  .view-item {
+    display: flex;
+    align-items: center;
+    padding: 9px 14px;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .view-item:last-child { border-bottom: none; }
+  .view-item:hover { background: var(--bg); }
+  .view-item-name {
+    flex: 1;
+    font-size: 0.84rem;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .view-item-count {
+    font-size: 0.75rem;
+    color: var(--muted);
+    background: var(--bg);
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .view-item-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .view-action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 3px 5px;
+    border-radius: 5px;
+    font-size: 0.72rem;
+    color: var(--muted);
+    transition: background 0.1s, color 0.1s;
+  }
+  .view-action-btn:hover { background: var(--border); color: var(--text); }
+  .view-action-btn.del:hover { background: #fee2e2; color: #dc2626; }
+
+  .settings-link {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-decoration: none;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    white-space: nowrap;
+  }
+  .settings-link:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* ── FILTER BAR ── */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .filter-group { display: flex; align-items: center; gap: 5px; }
+  .filter-bar label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .filter-bar select, .filter-bar input[type="text"] {
+    font-size: 0.8rem;
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s;
+    max-width: 130px;
+  }
+  .filter-bar input[type="text"] { max-width: 140px; cursor: text; }
+  .filter-bar select:focus, .filter-bar input:focus { border-color: var(--primary); }
+  .filter-bar select.active, .filter-bar input.active { border-color: var(--primary); background: var(--sel-bg); }
+  /* caste search has a datalist suggestion icon on some browsers */
+  .filter-bar input[list] { max-width: 150px; }
+
+  /* ── LABEL FILTER DROPDOWN ── */
+  .label-filter-wrap { position: relative; }
+  .label-filter-btn {
+    font-size: 0.8rem;
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    outline: none;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: border-color 0.15s;
+  }
+  .label-filter-btn.active { border-color: var(--primary); background: var(--sel-bg); }
+  .label-filter-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: 180px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    z-index: 300;
+    overflow: hidden;
+  }
+  .label-filter-dropdown.open { display: block; }
+  .label-filter-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    transition: background 0.1s;
+  }
+  .label-filter-option:hover { background: var(--bg); }
+  .label-filter-option input[type="checkbox"] { margin: 0; cursor: pointer; }
+  .label-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  .filter-bar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  .btn-clear {
+    font-size: 0.76rem;
+    color: var(--muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-clear:hover { border-color: var(--primary); color: var(--primary); }
+  .btn-select-all {
+    font-size: 0.76rem;
+    color: var(--primary);
+    background: var(--sel-bg);
+    border: 1px solid var(--sel-border);
+    border-radius: 7px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-select-all:hover { background: var(--primary); color: #fff; }
+
+  /* ── GRID ── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 14px;
+    padding: 20px;
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: visible;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    border: 2px solid transparent;
+    position: relative;
+  }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
+  .card.selected { border-color: var(--sel-border); background: var(--sel-bg); }
+
+  .card-inner { border-radius: 10px; overflow: hidden; }
+
+  .card-photo {
+    width: 100%;
+    aspect-ratio: 3/4;
+    object-fit: cover;
+    object-position: top center;
+    display: block;
+    background: #e8edf7;
+  }
+  .card-photo-placeholder {
+    width: 100%;
+    aspect-ratio: 3/4;
+    background: linear-gradient(135deg, #e8edf7 0%, #d1daf0 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.8rem;
+    color: #9db4d8;
+  }
+
+  .card-body { padding: 9px 9px 6px; }
+  .card-name {
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .card-meta {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-bottom: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* label chips on card */
+  .card-labels { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 5px; min-height: 0; }
+  .label-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.62rem;
+    font-weight: 600;
+    padding: 2px 6px 2px 5px;
+    border-radius: 999px;
+    color: #fff;
+    white-space: nowrap;
+    max-width: 90px;
+    overflow: hidden;
+  }
+  .label-chip-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.7); flex-shrink: 0; }
+  .label-chip-name { overflow: hidden; text-overflow: ellipsis; }
+  .label-chip-remove {
+    font-size: 0.6rem;
+    cursor: pointer;
+    opacity: 0.75;
+    margin-left: 1px;
+    flex-shrink: 0;
+    padding: 0 1px;
+    line-height: 1;
+  }
+  .label-chip-remove:hover { opacity: 1; }
+
+  /* add-label dropdown */
+  .card-label-wrap { position: relative; display: inline-block; }
+  .btn-add-label {
+    font-size: 0.65rem;
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px dashed var(--border);
+    border-radius: 999px;
+    padding: 2px 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.12s, color 0.12s;
+  }
+  .btn-add-label:hover { border-color: var(--primary); color: var(--primary); }
+  .label-dropdown {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 0;
+    min-width: 180px;
+    max-height: 280px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.14);
+    z-index: 500;
+    overflow: hidden;
+    display: none;
+    flex-direction: column;
+  }
+  .label-dropdown.open { display: flex; }
+  .label-dropdown-list {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+  }
+  .label-dropdown-empty {
+    padding: 10px 12px;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  .label-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.1s;
+  }
+  .label-dropdown-item:hover { background: var(--bg); }
+  .label-dropdown-item.already-on { opacity: 0.4; cursor: default; }
+  .label-dropdown-item-row { display: flex; align-items: center; width: 100%; }
+  .label-dropdown-item-row .label-item-main { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; cursor: pointer; }
+  .label-dropdown-item-row .label-item-del {
+    flex-shrink: 0; width: 20px; height: 20px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--muted); font-size: 0.7rem;
+    opacity: 0; transition: opacity 0.12s, background 0.12s;
+  }
+  .label-dropdown-item:hover .label-item-del { opacity: 1; }
+  .label-dropdown-item-row .label-item-del:hover { background: #fee2e2; color: #dc2626; }
+  /* ── Delete confirm popup ── */
+  .ldel-confirm {
+    position: fixed; inset: 0; z-index: 2000;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.45); backdrop-filter: blur(2px);
+  }
+  .ldel-confirm-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 22px 24px; width: 300px; max-width: 90vw;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.18);
+  }
+  .ldel-confirm-box h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; }
+  .ldel-confirm-box p  { font-size: 0.82rem; color: var(--muted); margin-bottom: 18px; line-height: 1.4; }
+  .ldel-confirm-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .ldel-btn-cancel { font-size: 0.82rem; padding: 7px 14px; border: 1px solid var(--border); border-radius: 8px; background: transparent; cursor: pointer; color: var(--muted); }
+  .ldel-btn-cancel:hover { background: var(--bg); }
+  .ldel-btn-delete { font-size: 0.82rem; font-weight: 700; padding: 7px 14px; border: none; border-radius: 8px; background: #ef4444; color: #fff; cursor: pointer; }
+  .ldel-btn-delete:hover { background: #dc2626; }
+  /* ── New label footer ── */
+  .label-dropdown-footer {
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .label-new-trigger {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 12px; cursor: pointer;
+    font-size: 0.78rem; color: var(--primary);
+    transition: background 0.1s;
+  }
+  .label-new-trigger:hover { background: var(--bg); }
+  .label-new-form {
+    display: none;
+    padding: 8px 10px;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .label-new-form.open { display: flex; }
+  .label-new-input {
+    font-size: 0.8rem;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    width: 100%;
+  }
+  .label-new-input:focus { border-color: var(--primary); }
+  .label-new-swatches {
+    display: flex; gap: 5px; flex-wrap: wrap;
+  }
+  .label-new-swatch {
+    width: 18px; height: 18px; border-radius: 50%;
+    cursor: pointer; border: 2px solid transparent;
+    transition: border-color 0.1s, transform 0.1s;
+    flex-shrink: 0;
+  }
+  .label-new-swatch:hover { transform: scale(1.15); }
+  .label-new-swatch.selected { border-color: var(--text); }
+  .label-new-actions {
+    display: flex; gap: 5px;
+  }
+  .label-new-create {
+    flex: 1; font-size: 0.75rem; font-weight: 700;
+    padding: 4px 0; border: none; border-radius: 6px;
+    background: var(--primary); color: #fff; cursor: pointer;
+    transition: opacity 0.1s;
+  }
+  .label-new-create:hover { opacity: 0.88; }
+  .label-new-cancel {
+    font-size: 0.75rem; padding: 4px 8px;
+    border: 1px solid var(--border); border-radius: 6px;
+    background: transparent; color: var(--muted); cursor: pointer;
+  }
+  .label-new-cancel:hover { background: var(--bg); }
+
+  .card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 9px 9px;
+    gap: 6px;
+  }
+  .btn-pdf {
+    font-size: 0.68rem;
+    color: var(--primary);
+    text-decoration: none;
+    background: var(--chip-bg);
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-weight: 600;
+    transition: background 0.12s;
+    white-space: nowrap;
+  }
+  .btn-pdf:hover { background: var(--primary); color: #fff; }
+  .btn-pdf-disabled {
+    font-size: 0.68rem;
+    color: var(--muted);
+    background: var(--bg);
+    padding: 3px 8px;
+    border-radius: 5px;
+  }
+  .btn-claim {
+    font-size: 0.68rem; font-weight: 600; border: none; cursor: pointer;
+    padding: 3px 8px; border-radius: 5px; transition: background 0.12s, color 0.12s;
+    white-space: nowrap;
+  }
+  .btn-claim-idle    { background: #eff6ff; color: var(--primary); }
+  .btn-claim-idle:hover { background: var(--primary); color: #fff; }
+  .btn-claim-pending { background: #fef3c7; color: #b45309; cursor: default; }
+  .btn-claim-accepted{ background: #dcfce7; color: #16a34a; cursor: default; }
+  .btn-claim-rejected{ background: #fee2e2; color: #dc2626; cursor: default; }
+
+  /* checkbox */
+  .card-checkbox {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+    border: 2px solid var(--border);
+    background: rgba(255,255,255,0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.12s;
+    font-size: 0.65rem;
+    color: transparent;
+    z-index: 10;
+  }
+  .card.selected .card-checkbox {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+  }
+
+  /* gender chip */
+  .gender-chip {
+    display: inline-block;
+    font-size: 0.62rem;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 999px;
+    margin-right: 3px;
+    color: #fff;
+  }
+  .gender-chip.female { background: #ec4899; }
+  .gender-chip.male   { background: #3b82f6; }
+
+  /* ── EMPTY / LOADING ── */
+  .empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+  .empty p    { font-size: 0.9rem; }
+
+  .sentinel {
+    grid-column: 1 / -1;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .loading-spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── DETAIL PANEL ── */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 200;
+    backdrop-filter: blur(2px);
+  }
+  .overlay.open { display: block; }
+
+  .panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 82vh;
+    background: var(--surface);
+    border-radius: 20px 20px 0 0;
+    z-index: 201;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    overflow-y: auto;
+    padding: 0 0 32px;
+  }
+  .panel.open { transform: translateY(0); }
+  .panel-handle {
+    width: 40px; height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 12px auto 0;
+  }
+  .panel-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 18px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-photo {
+    width: 76px; height: 101px;
+    object-fit: cover; object-position: top;
+    border-radius: 8px; flex-shrink: 0;
+    background: var(--chip-bg);
+  }
+  .panel-photo-ph {
+    width: 76px; height: 101px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #e8edf7, #d1daf0);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.2rem; flex-shrink: 0;
+  }
+  .panel-title h2 { font-size: 1.08rem; font-weight: 700; margin-bottom: 3px; }
+  .panel-title .meta { font-size: 0.8rem; color: var(--muted); line-height: 1.7; }
+  .panel-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .panel-btn {
+    font-size: 0.75rem; font-weight: 500; padding: 4px 11px;
+    border-radius: 6px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text);
+    cursor: pointer; text-decoration: none; display: inline-flex;
+    align-items: center; gap: 4px; transition: all 0.12s;
+  }
+  .panel-btn:hover { border-color: var(--primary); color: var(--primary); background: #eff6ff; }
+
+  /* ── Panel "Add to view" dropdown ── */
+  .panel-atv-wrap { display: inline-flex; }
+  /* The popup is fixed to viewport to escape panel overflow clipping */
+  .panel-atv-popup {
+    display: none; position: fixed;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.13);
+    min-width: 210px; z-index: 9999; overflow: hidden;
+  }
+  .panel-atv-popup.open { display: block; }
+  .panel-atv-header { font-size: 0.67rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.07em; color: var(--muted); padding: 8px 12px 4px; }
+  .panel-atv-item { padding: 8px 12px; font-size: 0.82rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    transition: background 0.1s; }
+  .panel-atv-item:hover { background: #eff6ff; }
+  .panel-atv-item.already { color: var(--muted); cursor: default; }
+  .panel-atv-item.already:hover { background: transparent; }
+  .panel-atv-badge { font-size: 0.67rem; font-weight: 700; padding: 1px 7px;
+    border-radius: 99px; white-space: nowrap; }
+  .panel-atv-badge.in    { background: #dcfce7; color: #16a34a; }
+  .panel-atv-badge.notIn { background: #eff6ff; color: var(--primary); }
+  .panel-atv-empty { padding: 10px 12px; font-size: 0.82rem; color: var(--muted); font-style: italic; }
+  .panel-close {
+    margin-left: auto;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 30px; height: 30px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.12s;
+  }
+  .panel-close:hover { background: var(--border); }
+  .panel-body { padding: 14px 18px; }
+  .panel-section { margin-bottom: 14px; }
+  .panel-section-title {
+    font-size: 0.68rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--muted); margin-bottom: 8px;
+  }
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 14px;
+  }
+  .detail-item { font-size: 0.82rem; line-height: 1.5; }
+  .detail-label { color: var(--muted); font-size: 0.7rem; margin-bottom: 1px; }
+  .detail-value { font-weight: 500; color: var(--text); }
+  .detail-value.nm { color: var(--muted); font-weight: 400; font-style: italic; }
+  .panel-pdf-btn {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 8px 20px;
+    background: var(--primary); color: #fff;
+    border-radius: 8px; font-size: 0.82rem; font-weight: 600;
+    text-decoration: none;
+    transition: background 0.12s;
+  }
+  .panel-pdf-btn:hover { background: var(--primary-h); }
+
+  /* ── STICKY SELECTION BAR ── */
+  .sel-bar {
+    position: fixed;
+    bottom: -90px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text);
+    color: #fff;
+    border-radius: 14px;
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+    z-index: 300;
+    transition: bottom 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+    white-space: nowrap;
+  }
+  .sel-bar.visible { bottom: 22px; }
+  .sel-bar-count { font-size: 0.84rem; font-weight: 600; }
+  .sel-bar-clear {
+    font-size: 0.76rem;
+    color: rgba(255,255,255,0.65);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  .sel-bar-save {
+    background: var(--primary); color: #fff;
+    border: none; border-radius: 7px;
+    padding: 7px 14px; font-size: 0.8rem; font-weight: 700;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .sel-bar-save:hover { background: var(--primary-h); }
+  .sel-bar-add {
+    background: rgba(255,255,255,0.15); color: #fff;
+    border: 1px solid rgba(255,255,255,0.3); border-radius: 7px;
+    padding: 7px 14px; font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; position: relative;
+    transition: background 0.12s;
+  }
+  .sel-bar-add:hover { background: rgba(255,255,255,0.25); }
+  .sel-bar-merge {
+    background: #dc2626; color: #fff;
+    border: none; border-radius: 7px;
+    padding: 7px 14px; font-size: 0.8rem; font-weight: 700;
+    cursor: pointer; transition: background 0.12s;
+  }
+  .sel-bar-merge:hover { background: #b91c1c; }
+  .sel-bar-merge:disabled { opacity: 0.4; cursor: default; }
+  /* Add-to-view inline dropdown */
+  .add-view-popup {
+    display: none; position: absolute; bottom: calc(100% + 8px); left: 0;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    min-width: 200px; z-index: 400; overflow: hidden;
+  }
+  .add-view-popup.open { display: block; }
+  .add-view-popup-header { font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--muted); padding: 8px 12px 4px; }
+  .add-view-option { padding: 8px 12px; font-size: 0.83rem; color: var(--text);
+    cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .add-view-option:hover { background: #eff6ff; }
+  .add-view-option-count { font-size: 0.72rem; color: var(--muted); }
+  .add-view-empty { padding: 10px 12px; font-size: 0.82rem; color: var(--muted); font-style: italic; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 600;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 400px;
+    margin: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .modal h3 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+  .modal p  { font-size: 0.82rem; color: var(--muted); margin-bottom: 16px; }
+  .modal input[type="text"] {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.88rem;
+    margin-bottom: 16px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .modal input[type="text"]:focus { border-color: var(--primary); }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .btn-cancel {
+    font-size: 0.82rem; padding: 8px 16px;
+    background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    cursor: pointer;
+  }
+  .btn-confirm {
+    font-size: 0.82rem; font-weight: 700; padding: 8px 16px;
+    background: var(--primary); color: #fff;
+    border: none; border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .btn-confirm:hover { background: var(--primary-h); }
+
+  /* ── TOAST ── */
+  /* ── PROFILE BANNER ── */
+  .profile-banner { background: #eff6ff; border-bottom: 1px solid #bfdbfe; padding: 0; }
+  .profile-banner-inner { display: flex; align-items: center; gap: 12px; padding: 10px 20px; max-width: 100%; }
+  .profile-banner-icon { font-size: 1.2rem; flex-shrink: 0; }
+  .profile-banner-inner > div { flex: 1; min-width: 0; }
+  .profile-banner-inner strong { font-size: 0.88rem; color: #1e40af; display: block; }
+  .profile-banner-sub { font-size: 0.78rem; color: #3b82f6; }
+  .profile-banner-btn { font-size: 0.8rem; font-weight: 600; background: #2563eb; color: #fff; border: none; border-radius: 7px; padding: 6px 14px; text-decoration: none; white-space: nowrap; flex-shrink: 0; }
+  .profile-banner-btn:hover { background: #1d4ed8; }
+  .profile-banner-dismiss { background: none; border: none; color: #93c5fd; font-size: 0.9rem; cursor: pointer; padding: 4px; flex-shrink: 0; }
+  .profile-banner-dismiss:hover { color: #1e40af; }
+
+  .toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #1a1a1a;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 0.84rem;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 700;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* rename input in views dropdown */
+  .view-rename-input {
+    border: 1px solid var(--primary);
+    border-radius: 5px;
+    font-size: 0.82rem;
+    padding: 2px 6px;
+    flex: 1;
+    outline: none;
+    background: var(--sel-bg);
+  }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<div class="header">
+  <div class="header-top">
+    <h1>&#128205; Biodata</h1>
+    <div class="header-nav">
+      <!-- Views dropdown -->
+      <div class="views-menu" id="views-menu">
+        <button class="views-btn" onclick="toggleViewsDropdown(event)">
+          &#128065; Views <span id="views-count-badge" style="font-size:0.72rem;color:var(--muted);font-weight:400;"></span> &#9660;
+        </button>
+        <div class="views-dropdown" id="views-dropdown">
+          <div class="views-dropdown-header">Saved Views</div>
+          <div id="views-list"></div>
+        </div>
+      </div>
+      {% if current_user.is_admin %}
+        <a class="settings-link" href="/admin" style="color:#dc2626">&#9760; Admin{% if pending_count > 0 %} <span style="background:#dc2626;color:#fff;font-size:0.62rem;font-weight:700;border-radius:99px;padding:1px 5px;vertical-align:middle;">{{ pending_count }}</span>{% endif %}</a>
+      {% endif %}
+      <a class="settings-link" href="/profile/me">&#128100; My Profile</a>
+      <span class="count-badge" id="count-badge">Loading…</span>
+      <span class="user-badge">{{ current_user.username }}</span>
+      <a class="logout-link" href="/logout">Sign out</a>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <!-- Height range -->
+    <div class="filter-group">
+      <label>Height</label>
+      <select id="f-height-min" onchange="onFilterChange()">
+        <option value="">Any</option>
+        <option value="58">4'10"</option>
+        <option value="59">4'11"</option>
+        <option value="60">5'0"</option>
+        <option value="61">5'1"</option>
+        <option value="62">5'2"</option>
+        <option value="63">5'3"</option>
+        <option value="64">5'4"</option>
+        <option value="65">5'5"</option>
+        <option value="66">5'6"</option>
+        <option value="67">5'7"</option>
+        <option value="68">5'8"</option>
+        <option value="69">5'9"</option>
+        <option value="70">5'10"</option>
+        <option value="71">5'11"</option>
+        <option value="72">6'0"</option>
+      </select>
+      <label>–</label>
+      <select id="f-height-max" onchange="onFilterChange()">
+        <option value="">Any</option>
+        <option value="58">4'10"</option>
+        <option value="59">4'11"</option>
+        <option value="60">5'0"</option>
+        <option value="61">5'1"</option>
+        <option value="62">5'2"</option>
+        <option value="63">5'3"</option>
+        <option value="64">5'4"</option>
+        <option value="65">5'5"</option>
+        <option value="66">5'6"</option>
+        <option value="67">5'7"</option>
+        <option value="68">5'8"</option>
+        <option value="69">5'9"</option>
+        <option value="70">5'10"</option>
+        <option value="71">5'11"</option>
+        <option value="72">6'0"</option>
+      </select>
+    </div>
+
+    <!-- Birth year range -->
+    <div class="filter-group">
+      <label>Year</label>
+      <select id="f-year-from" onchange="onFilterChange()">
+        <option value="">Any</option>
+        {% for y in years %}<option value="{{ y }}">{{ y }}</option>{% endfor %}
+      </select>
+      <label>–</label>
+      <select id="f-year-to" onchange="onFilterChange()">
+        <option value="">Any</option>
+        {% for y in years %}<option value="{{ y }}">{{ y }}</option>{% endfor %}
+      </select>
+    </div>
+
+    <!-- Weight -->
+    <div class="filter-group">
+      <label>Weight</label>
+      <select id="f-weight-max" onchange="onFilterChange()">
+        <option value="">Any</option>
+        <option value="45">&lt;45 kg</option>
+        <option value="50">&lt;50 kg</option>
+        <option value="55">&lt;55 kg</option>
+        <option value="60">&lt;60 kg</option>
+        <option value="65">&lt;65 kg</option>
+        <option value="70">&lt;70 kg</option>
+        <option value="75">&lt;75 kg</option>
+      </select>
+    </div>
+
+    <!-- Gender -->
+    <div class="filter-group">
+      <label>Gender</label>
+      <select id="f-gender" onchange="onFilterChange()">
+        <option value="">Any</option>
+        <option value="Female">Female</option>
+        <option value="Male">Male</option>
+      </select>
+    </div>
+
+    <!-- Labels multi-select -->
+    <div class="filter-group">
+      <label>Labels</label>
+      <div class="label-filter-wrap" id="label-filter-wrap">
+        <button class="label-filter-btn" id="label-filter-btn" onclick="toggleLabelFilter(event)">
+          <span id="label-filter-text">Any</span> &#9660;
+        </button>
+        <div class="label-filter-dropdown" id="label-filter-dropdown">
+          {% if labels %}
+            {% for lbl in labels %}
+            <label class="label-filter-option">
+              <input type="checkbox" value="{{ lbl.id }}" onchange="onFilterChange()">
+              <span class="label-dot" style="background:{{ lbl.color }}"></span>
+              {{ lbl.name }}
+            </label>
+            {% endfor %}
+          {% else %}
+            <div style="padding:10px 12px;font-size:0.78rem;color:var(--muted);">No labels yet</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Caste search -->
+    <div class="filter-group">
+      <label>Caste</label>
+      <input type="text" id="f-caste" list="caste-suggestions" placeholder="Any" oninput="onFilterChange()" style="max-width:130px">
+    </div>
+
+    <!-- Residential city -->
+    <div class="filter-group">
+      <label>Family city</label>
+      <select id="f-res-city" onchange="onFilterChange()">
+        <option value="">Any</option>
+        {% for city in res_cities %}<option value="{{ city }}">{{ city }}</option>{% endfor %}
+      </select>
+    </div>
+
+    <!-- Job / current location -->
+    <div class="filter-group">
+      <label>Current location</label>
+      <select id="f-job-loc" onchange="onFilterChange()">
+        <option value="">Any</option>
+        {% for loc in job_locations %}<option value="{{ loc }}">{{ loc }}</option>{% endfor %}
+      </select>
+    </div>
+
+    <!-- Search -->
+    <div class="filter-group">
+      <input type="text" id="f-search" placeholder="&#128269; Search name…" oninput="onFilterChange()">
+    </div>
+
+    <!-- Right side -->
+    <div class="filter-bar-right">
+      <button class="btn-clear" onclick="clearFilters()">Clear</button>
+      <button class="btn-select-all" onclick="selectAllLoaded()">Select all loaded</button>
+    </div>
+  </div>
+</div>
+
+<!-- datalist for caste typeahead — populated by JS from API -->
+<datalist id="caste-suggestions"></datalist>
+{% if not has_profile and not current_user.is_admin %}
+<div class="profile-banner" id="profile-banner">
+  <div class="profile-banner-inner">
+    <span class="profile-banner-icon">👤</span>
+    <div>
+      <strong>Complete your profile</strong>
+      <span class="profile-banner-sub">Add yourself to the biodata pool so others can find you.</span>
+    </div>
+    <a class="profile-banner-btn" href="/profile/me/edit">Create profile</a>
+    <button class="profile-banner-dismiss" onclick="this.closest('.profile-banner').remove()" title="Dismiss">✕</button>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── GRID ── -->
+<div class="grid" id="grid"></div>
+<div id="sentinel" style="height:1px;margin-top:-1px;"></div>
+
+<!-- ── OVERLAYS ── -->
+<div class="overlay" id="overlay" onclick="closePanel()"></div>
+<div class="panel" id="panel">
+  <div class="panel-handle"></div>
+  <div class="panel-header" id="panel-header"></div>
+  <div class="panel-body" id="panel-body"></div>
+</div>
+
+<!-- ── STICKY SELECTION BAR ── -->
+<div class="sel-bar" id="sel-bar">
+  <span class="sel-bar-count" id="sel-count">0 selected</span>
+  <button class="sel-bar-clear" onclick="clearSelection()">Clear</button>
+  <button class="sel-bar-add" id="btn-add-to-view" onclick="toggleAddViewPopup(event)">
+    &#43; Add to view
+    <div class="add-view-popup" id="add-view-popup">
+      <div class="add-view-popup-header">Add to existing view</div>
+      <div id="add-view-options"></div>
+    </div>
+  </button>
+  <button class="sel-bar-save" onclick="openSaveViewModal()">&#128190; Save as View</button>
+  {% if current_user.is_admin %}
+  <button class="sel-bar-merge" id="btn-merge" onclick="doMerge()" title="Merge selected profiles">&#9889; Merge</button>
+  {% endif %}
+</div>
+
+<!-- ── SAVE VIEW MODAL ── -->
+<div class="modal-overlay" id="save-modal">
+  <div class="modal">
+    <h3>Save as View</h3>
+    <p>Give this collection a name. You can rename it later.</p>
+    <input type="text" id="save-view-name" placeholder="e.g. Doctors shortlist">
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeSaveViewModal()">Cancel</button>
+      <button class="btn-confirm" onclick="confirmSaveView()">Save View</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// State
+// ═══════════════════════════════════════════════════════════════════════════
+const ALL_LABELS  = {{ labels | tojson }};
+let   ALL_VIEWS   = {{ views  | tojson }};
+
+const CURRENT_USER_ID = {{ current_user.id }};
+const IS_ADMIN        = {{ 'true' if current_user.is_admin else 'false' }};
+
+let offset       = 0;
+const LIMIT      = 50;
+let total        = {{ total }};
+let loading      = false;
+let noMore       = false;
+let fetchVersion = 0;   // bump on every new filter set so stale responses are discarded
+
+const selected   = new Set();   // candidate ids
+const cardData   = new Map();   // id -> candidate dict (in memory for panel display)
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Filter helpers
+// ═══════════════════════════════════════════════════════════════════════════
+function getFilters() {
+  const labelIds = [...document.querySelectorAll('#label-filter-dropdown input[type=checkbox]:checked')]
+                   .map(el => el.value);
+  const params = new URLSearchParams();
+  const hMin    = document.getElementById('f-height-min').value;
+  const hMax    = document.getElementById('f-height-max').value;
+  const yFrom   = document.getElementById('f-year-from').value;
+  const yTo     = document.getElementById('f-year-to').value;
+  const wMax    = document.getElementById('f-weight-max').value;
+  const gender  = document.getElementById('f-gender').value;
+  const search  = document.getElementById('f-search').value.trim();
+  const caste   = document.getElementById('f-caste').value.trim();
+  const resCity = document.getElementById('f-res-city').value;
+  const jobLoc  = document.getElementById('f-job-loc').value;
+
+  // B-4: warn if height range is inverted, skip both so the user sees results
+  if (hMin && hMax && parseInt(hMin) > parseInt(hMax)) {
+    showFilterWarning('Height "from" is taller than "to" — height filter ignored.');
+  } else {
+    clearFilterWarning();
+    if (hMin) params.set('height_min', hMin);
+    if (hMax) params.set('height_max', hMax);
+  }
+  if (yFrom)   params.set('birth_year_from', yFrom);
+  if (yTo)     params.set('birth_year_to',   yTo);
+  if (wMax)    params.set('weight_max',       wMax);
+  if (gender)  params.set('gender',           gender);
+  if (search)  params.set('search',           search);
+  if (caste)   params.set('caste',            caste);
+  if (resCity) params.set('residential_city', resCity);
+  if (jobLoc)  params.set('job_location',     jobLoc);
+  if (labelIds.length) params.set('label_ids', labelIds.join(','));
+  return params;
+}
+
+function showFilterWarning(msg) {
+  let el = document.getElementById('filter-warning');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'filter-warning';
+    el.style.cssText = 'font-size:0.75rem;color:#b45309;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:4px 10px;margin-top:4px;';
+    const filterArea = document.getElementById('f-search').closest('.filter-bar') ||
+                       document.getElementById('f-height-min').closest('div');
+    // Insert after the filter rows
+    const grid = document.getElementById('grid');
+    grid.parentNode.insertBefore(el, grid);
+  }
+  el.textContent = '⚠ ' + msg;
+  el.style.display = 'block';
+}
+
+function clearFilterWarning() {
+  const el = document.getElementById('filter-warning');
+  if (el) el.style.display = 'none';
+}
+
+function markActiveFilters() {
+  ['f-height-min','f-height-max','f-year-from','f-year-to','f-weight-max','f-gender','f-res-city','f-job-loc'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('active', !!el.value);
+  });
+  ['f-search','f-caste'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('active', !!el.value.trim());
+  });
+
+  const checked = [...document.querySelectorAll('#label-filter-dropdown input[type=checkbox]:checked')];
+  const btn = document.getElementById('label-filter-btn');
+  btn.classList.toggle('active', checked.length > 0);
+  document.getElementById('label-filter-text').textContent =
+    checked.length ? checked.map(el => el.closest('label').textContent.trim()).join(', ') : 'Any';
+}
+
+// debounce for search input
+let debounceTimer = null;
+function onFilterChange() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    markActiveFilters();
+    resetAndLoad();
+  }, 280);
+}
+
+function clearFilters() {
+  ['f-height-min','f-height-max','f-year-from','f-year-to','f-weight-max','f-gender','f-res-city','f-job-loc'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('f-search').value = '';
+  document.getElementById('f-caste').value  = '';
+  document.querySelectorAll('#label-filter-dropdown input[type=checkbox]').forEach(el => el.checked = false);
+  markActiveFilters();
+  resetAndLoad();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// Card rendering
+// ═══════════════════════════════════════════════════════════════════════════
+function claimBtn(c) {
+  // Admins manage claims — they never submit them
+  if (IS_ADMIN) return '';
+  // Only show on admin-managed profiles (created_by_user_id is null)
+  if (c.created_by_user_id !== null && c.created_by_user_id !== undefined) return '';
+  // If the current user owns this profile (just accepted), hide
+  if (c.created_by_user_id === CURRENT_USER_ID) return '';
+
+  const st = c.my_claim_status;
+  if (!st) {
+    return `<button class="btn-claim btn-claim-idle"
+              onclick="claimProfile(event,${c.id})"
+              title="Claim this as your profile">&#127996; This is me</button>`;
+  }
+  if (st === 'pending')  return `<span class="btn-claim btn-claim-pending" title="Awaiting admin review">&#9203; Claim pending</span>`;
+  if (st === 'accepted') return `<span class="btn-claim btn-claim-accepted" title="Claim accepted">&#10003; Claimed</span>`;
+  if (st === 'rejected') return `<button class="btn-claim btn-claim-idle"
+              onclick="claimProfile(event,${c.id})"
+              title="Your previous claim was rejected — you can try again">&#127996; Re-claim</button>`;
+  return '';
+}
+
+async function claimProfile(e, cid) {
+  e.stopPropagation();
+  const btn = e.currentTarget;
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+  try {
+    const r = await fetch(`/api/candidate/${cid}/claim`, { method: 'POST' });
+    const data = await r.json();
+    if (r.ok) {
+      // Update in-memory card data and re-render button
+      const c = cardData.get(cid);
+      if (c) {
+        c.my_claim_status = 'pending';
+        // Replace just the claim button
+        const oldBtn = document.querySelector(`#card-${cid} .btn-claim`);
+        if (oldBtn) oldBtn.outerHTML = claimBtn(c);
+      }
+      showToast('Claim submitted — awaiting admin review');
+    } else if (data.error === 'already_claimed') {
+      showToast('You already have a ' + data.status + ' claim on this profile');
+      btn.disabled = false;
+      btn.textContent = '🏷 This is me';
+    } else {
+      showToast(data.error || 'Could not submit claim');
+      btn.disabled = false;
+      btn.textContent = '🏷 This is me';
+    }
+  } catch {
+    showToast('Network error');
+    btn.disabled = false;
+    btn.textContent = '🏷 This is me';
+  }
+}
+
+function renderCard(c) {
+  cardData.set(c.id, c);
+
+  const photoHtml = c.photo_url
+    ? `<img class="card-photo" src="${c.photo_url}" alt="${esc(c.name)}" loading="lazy">`
+    : `<div class="card-photo-placeholder">&#128105;</div>`;
+
+  const genderChip = c.gender && c.gender !== 'Not Mentioned'
+    ? `<span class="gender-chip ${c.gender.toLowerCase() === 'female' ? 'female' : 'male'}">${esc(c.gender)}</span>`
+    : '';
+
+  const meta = [
+    c.birth_year,
+    c.age ? c.age + ' yrs' : null,
+    c.height && c.height !== 'Not Mentioned' ? c.height : null,
+    c.weight && c.weight !== 'Not Mentioned' ? c.weight : null,
+  ].filter(Boolean).join(' · ');
+
+  const cityMeta = [
+    c.residential_city && c.residential_city !== 'Not Mentioned' ? c.residential_city : null,
+    c.job_location && c.job_location !== 'Not Mentioned' ? c.job_location : null,
+  ].filter(Boolean).join(' · ');
+
+  const labelChips = (c.labels || []).map(l => `
+    <span class="label-chip" style="background:${esc(l.color)}" data-label-id="${l.id}">
+      <span class="label-chip-dot"></span>
+      <span class="label-chip-name" title="${esc(l.name)}">${esc(l.name)}</span>
+      <span class="label-chip-remove" onclick="removeLabel(event,${c.id},${l.id})" title="Remove label">&#10005;</span>
+    </span>`).join('');
+
+  const existingLabelIds = new Set((c.labels || []).map(l => l.id));
+  const dropdownItems = ALL_LABELS.length
+    ? ALL_LABELS.map(l => `
+        <div class="label-dropdown-item${existingLabelIds.has(l.id) ? ' already-on' : ''}"
+             data-label-id="${l.id}">
+          <div class="label-dropdown-item-row">
+            <div class="label-item-main" onclick="addLabel(event,${c.id},${l.id},this.closest('.label-dropdown-item'))">
+              <span class="label-dot" style="background:${esc(l.color)}"></span>
+              ${esc(l.name)}
+            </div>
+            <div class="label-item-del" onclick="confirmDeleteLabel(event,${l.id},'${esc(l.name)}')" title="Delete label">&#10005;</div>
+          </div>
+        </div>`).join('')
+    : `<div class="label-dropdown-empty">No labels yet</div>`;
+
+  const dropdownHtml = `
+    <div class="label-dropdown-list">${dropdownItems}</div>
+    <div class="label-dropdown-footer">
+      <div class="label-new-trigger" onclick="toggleNewLabelForm(event,'ldrop-${c.id}')">
+        <span style="font-size:1rem;line-height:1">＋</span> New label
+      </div>
+      <div class="label-new-form" id="lnew-${c.id}">
+        <input class="label-new-input" type="text" placeholder="Label name…"
+               id="lnew-name-${c.id}" maxlength="40"
+               onkeydown="if(event.key==='Enter'){createInlineLabel(event,${c.id})}
+                          else if(event.key==='Escape'){cancelNewLabelForm(event,'ldrop-${c.id}')}">
+        <div class="label-new-swatches" id="lnew-swatches-${c.id}"></div>
+        <div class="label-new-actions">
+          <button class="label-new-create" onclick="createInlineLabel(event,${c.id})">Create</button>
+          <button class="label-new-cancel" onclick="cancelNewLabelForm(event,'ldrop-${c.id}')">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+
+  const pdfBtn = c.pdf_url
+    ? `<a class="btn-pdf" href="${c.pdf_url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">&#128196; PDF</a>`
+    : `<span class="btn-pdf-disabled">No PDF</span>`;
+
+  const isSelected = selected.has(c.id);
+
+  const el = document.createElement('div');
+  el.className = 'card' + (isSelected ? ' selected' : '');
+  el.id = 'card-' + c.id;
+  el.dataset.id = c.id;
+  el.dataset.stem = c.folder_stem || '';
+  el.innerHTML = `
+    <div class="card-checkbox" onclick="toggleSelect(event,${c.id})">&#10003;</div>
+    <div class="card-inner">
+      ${photoHtml}
+      <div class="card-body">
+        <div class="card-name" title="${esc(c.name)}">${esc(c.name)}</div>
+        <div class="card-meta">${genderChip}${esc(meta)}</div>
+        ${cityMeta ? `<div class="card-meta" style="margin-bottom:3px">${esc(cityMeta)}</div>` : ''}
+        <div class="card-labels" id="clabels-${c.id}">${labelChips}</div>
+        <div class="card-label-wrap">
+          <button class="btn-add-label" onclick="toggleLabelDropdown(event,${c.id})">+ Label</button>
+          <div class="label-dropdown" id="ldrop-${c.id}">${dropdownHtml}</div>
+        </div>
+      </div>
+      <div class="card-actions">
+        ${pdfBtn}
+        ${claimBtn(c)}
+      </div>
+    </div>`;
+
+  el.addEventListener('click', (e) => {
+    if (e.target.closest('.card-checkbox')) return;
+    if (e.target.closest('.btn-add-label')) return;
+    if (e.target.closest('.label-dropdown')) return;
+    if (e.target.closest('.btn-pdf')) return;
+    if (e.target.closest('.label-chip-remove')) return;
+    openPanel(c.id);
+  });
+
+  return el;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Data loading
+// ═══════════════════════════════════════════════════════════════════════════
+function resetAndLoad() {
+  offset  = 0;
+  noMore  = false;
+  fetchVersion++;
+  document.getElementById('grid').innerHTML = '';
+  cardData.clear();
+  loadMore();
+}
+
+async function loadMore() {
+  if (loading || noMore) return;
+  loading = true;
+
+  const myVersion = fetchVersion;
+  const params    = getFilters();
+  params.set('offset', offset);
+  params.set('limit',  LIMIT);
+
+  // Show spinner
+  const grid = document.getElementById('grid');
+  let spinner = document.getElementById('loading-spinner');
+  if (!spinner) {
+    spinner = document.createElement('div');
+    spinner.className = 'sentinel';
+    spinner.id = 'loading-spinner';
+    spinner.innerHTML = '<div class="loading-spinner"></div>';
+    grid.after(spinner);
+  }
+  spinner.style.display = 'flex';
+
+  try {
+    const res  = await fetch('/api/candidates?' + params.toString());
+    const data = await res.json();
+
+    if (myVersion !== fetchVersion) return; // stale response
+
+    total = data.total;
+
+    if (data.candidates.length === 0 && offset === 0) {
+      grid.innerHTML = `<div class="empty">
+        <div class="empty-icon">&#128269;</div>
+        <p>No candidates match the current filters.</p>
+      </div>`;
+    } else {
+      data.candidates.forEach(c => grid.appendChild(renderCard(c)));
+    }
+
+    offset += data.candidates.length;
+    noMore  = !data.has_more;
+    updateCountBadge(); // called after cards are in the DOM
+  } catch (err) {
+    console.error('Load error', err);
+  } finally {
+    if (myVersion === fetchVersion) {
+      loading = false;
+      const s = document.getElementById('loading-spinner');
+      if (s) s.style.display = 'none';
+    }
+  }
+}
+
+function updateCountBadge() {
+  const shown = document.querySelectorAll('.card').length;
+  document.getElementById('count-badge').textContent = `${shown} of ${total}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// IntersectionObserver — infinite scroll
+// ═══════════════════════════════════════════════════════════════════════════
+const io = new IntersectionObserver(entries => {
+  if (entries[0].isIntersecting) loadMore();
+}, { rootMargin: '200px' });
+io.observe(document.getElementById('sentinel'));
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Selection
+// ═══════════════════════════════════════════════════════════════════════════
+function toggleSelect(event, id) {
+  event.stopPropagation();
+  const card = document.getElementById('card-' + id);
+  if (selected.has(id)) { selected.delete(id); card && card.classList.remove('selected'); }
+  else                  { selected.add(id);    card && card.classList.add('selected');    }
+  updateSelBar();
+}
+
+function selectAllLoaded() {
+  document.querySelectorAll('.card').forEach(card => {
+    const id = parseInt(card.dataset.id);
+    selected.add(id);
+    card.classList.add('selected');
+  });
+  updateSelBar();
+}
+
+function clearSelection() {
+  selected.forEach(id => {
+    const el = document.getElementById('card-' + id);
+    if (el) el.classList.remove('selected');
+  });
+  selected.clear();
+  updateSelBar();
+}
+
+function updateSelBar() {
+  const n   = selected.size;
+  const bar = document.getElementById('sel-bar');
+  document.getElementById('sel-count').textContent = n + ' selected';
+  bar.classList.toggle('visible', n > 0);
+  // Merge button needs ≥2 selected
+  const mergeBtn = document.getElementById('btn-merge');
+  if (mergeBtn) mergeBtn.disabled = (n < 2);
+}
+
+function doMerge() {
+  if (selected.size < 2) { showToast('Select at least 2 profiles to merge'); return; }
+  // Build a hidden form and POST to /admin/merge
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = '/admin/merge';
+  form.style.display = 'none';
+  selected.forEach(id => {
+    const inp = document.createElement('input');
+    inp.type = 'hidden';
+    inp.name = 'ids';
+    inp.value = id;
+    form.appendChild(inp);
+  });
+  document.body.appendChild(form);
+  form.submit();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Labels on cards
+// ═══════════════════════════════════════════════════════════════════════════
+function toggleLabelDropdown(event, cid) {
+  event.stopPropagation();
+  closeAllDropdowns('ldrop-' + cid);
+  const drop = document.getElementById('ldrop-' + cid);
+  if (drop) drop.classList.toggle('open');
+}
+
+async function addLabel(event, cid, labelId, itemEl) {
+  event.stopPropagation();
+  if (itemEl.classList.contains('already-on')) return;
+  try {
+    const res  = await fetch(`/api/candidate/${cid}/labels`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({label_id: labelId}),
+    });
+    const data = await res.json();
+    // Update in-memory data
+    const c = cardData.get(cid);
+    if (c) { c.labels = data.labels; updateCardLabels(cid, data.labels); }
+    // Also update panel if open
+    if (panelCid === cid) refreshPanelLabels(data.labels);
+    document.getElementById('ldrop-' + cid).classList.remove('open');
+  } catch(err) { console.error(err); }
+}
+
+async function removeLabel(event, cid, labelId) {
+  event.stopPropagation();
+  try {
+    const res  = await fetch(`/api/candidate/${cid}/labels/${labelId}`, { method: 'DELETE' });
+    const data = await res.json();
+    const c = cardData.get(cid);
+    if (c) { c.labels = data.labels; updateCardLabels(cid, data.labels); }
+    if (panelCid === cid) refreshPanelLabels(data.labels);
+  } catch(err) { console.error(err); }
+}
+
+function updateCardLabels(cid, labels) {
+  const container = document.getElementById('clabels-' + cid);
+  if (!container) return;
+  container.innerHTML = labels.map(l => `
+    <span class="label-chip" style="background:${esc(l.color)}" data-label-id="${l.id}">
+      <span class="label-chip-dot"></span>
+      <span class="label-chip-name" title="${esc(l.name)}">${esc(l.name)}</span>
+      <span class="label-chip-remove" onclick="removeLabel(event,${cid},${l.id})" title="Remove label">&#10005;</span>
+    </span>`).join('');
+
+  // Refresh dropdown to reflect already-on state
+  const existingIds = new Set(labels.map(l => l.id));
+  const drop = document.getElementById('ldrop-' + cid);
+  if (drop) {
+    drop.querySelectorAll('.label-dropdown-item').forEach(item => {
+      const lid = parseInt(item.dataset.labelId);
+      item.classList.toggle('already-on', existingIds.has(lid));
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Inline label creation
+// ═══════════════════════════════════════════════════════════════════════════
+
+const LABEL_SWATCHES = [
+  '#ef4444','#f97316','#eab308','#22c55e','#14b8a6',
+  '#3b82f6','#8b5cf6','#ec4899','#6b7280','#1e293b',
+];
+
+function _initSwatches(cid) {
+  const container = document.getElementById('lnew-swatches-' + cid);
+  if (!container || container.dataset.init) return;
+  container.dataset.init = '1';
+  // default = first swatch
+  LABEL_SWATCHES.forEach((col, i) => {
+    const s = document.createElement('div');
+    s.className = 'label-new-swatch' + (i === 0 ? ' selected' : '');
+    s.style.background = col;
+    s.dataset.color = col;
+    s.title = col;
+    s.addEventListener('click', e => {
+      e.stopPropagation();
+      container.querySelectorAll('.label-new-swatch').forEach(x => x.classList.remove('selected'));
+      s.classList.add('selected');
+    });
+    container.appendChild(s);
+  });
+}
+
+function toggleNewLabelForm(event, dropId) {
+  event.stopPropagation();
+  const drop = document.getElementById(dropId);
+  if (!drop) return;
+  const cid = parseInt(dropId.replace('ldrop-', ''));
+  const form = document.getElementById('lnew-' + cid);
+  const trigger = drop.querySelector('.label-new-trigger');
+  if (!form) return;
+  const isOpen = form.classList.contains('open');
+  form.classList.toggle('open', !isOpen);
+  if (trigger) trigger.style.display = isOpen ? '' : 'none';
+  if (!isOpen) {
+    _initSwatches(cid);
+    const inp = document.getElementById('lnew-name-' + cid);
+    if (inp) { inp.value = ''; inp.focus(); }
+  }
+}
+
+function cancelNewLabelForm(event, dropId) {
+  event.stopPropagation();
+  const drop = document.getElementById(dropId);
+  if (!drop) return;
+  const cid = parseInt(dropId.replace('ldrop-', ''));
+  const form = document.getElementById('lnew-' + cid);
+  if (form) form.classList.remove('open');
+  const trigger = drop.querySelector('.label-new-trigger');
+  if (trigger) trigger.style.display = '';
+}
+
+async function createInlineLabel(event, cid) {
+  event.stopPropagation();
+  const nameEl  = document.getElementById('lnew-name-' + cid);
+  const swatches = document.getElementById('lnew-swatches-' + cid);
+  const name  = nameEl ? nameEl.value.trim() : '';
+  if (!name) { if (nameEl) nameEl.focus(); return; }
+  const selSwatch = swatches ? swatches.querySelector('.label-new-swatch.selected') : null;
+  const color = selSwatch ? selSwatch.dataset.color : LABEL_SWATCHES[0];
+
+  const btn = document.querySelector(`#lnew-${cid} .label-new-create`);
+  if (btn) btn.disabled = true;
+
+  try {
+    const res  = await fetch('/api/labels', {
+      method:  'POST',
+      headers: {'Content-Type': 'application/json'},
+      body:    JSON.stringify({ name, color }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showToast(data.error || 'Could not create label');
+      if (btn) btn.disabled = false;
+      return;
+    }
+    // Add to global list
+    ALL_LABELS.push(data);
+    // Rebuild every open dropdown's list
+    _rebuildAllDropdownLists();
+    // Collapse the form
+    cancelNewLabelForm(event, 'ldrop-' + cid);
+    showToast(`Label "${data.name}" created`);
+  } catch(err) {
+    showToast('Network error');
+    if (btn) btn.disabled = false;
+  }
+}
+
+function _rebuildAllDropdownLists() {
+  // Rebuild label list inside every rendered card's dropdown
+  document.querySelectorAll('.label-dropdown').forEach(drop => {
+    const idMatch = drop.id.match(/^ldrop-(\d+)$/);
+    if (!idMatch) return;
+    const cid = parseInt(idMatch[1]);
+    const c = cardData.get(cid);
+    const existingIds = new Set((c ? c.labels || [] : []).map(l => l.id));
+    const listEl = drop.querySelector('.label-dropdown-list');
+    if (!listEl) return;
+    listEl.innerHTML = ALL_LABELS.length
+      ? ALL_LABELS.map(l => `
+          <div class="label-dropdown-item${existingIds.has(l.id) ? ' already-on' : ''}"
+               data-label-id="${l.id}">
+            <div class="label-dropdown-item-row">
+              <div class="label-item-main" onclick="addLabel(event,${cid},${l.id},this.closest('.label-dropdown-item'))">
+                <span class="label-dot" style="background:${esc(l.color)}"></span>
+                ${esc(l.name)}
+              </div>
+              <div class="label-item-del" onclick="confirmDeleteLabel(event,${l.id},'${esc(l.name)}')" title="Delete label">&#10005;</div>
+            </div>
+          </div>`).join('')
+      : `<div class="label-dropdown-empty">No labels yet</div>`;
+  });
+}
+let panelCid = null;
+
+function openPanel(cid) {
+  const c = cardData.get(cid);
+  if (!c) return;
+  panelCid = cid;
+
+  const photo = c.photo_url
+    ? `<img class="panel-photo" src="${c.photo_url}" alt="${esc(c.name)}">`
+    : `<div class="panel-photo-ph">&#128105;</div>`;
+
+  const pdfBtnAction = c.pdf_url
+    ? `<a class="panel-btn" href="${c.pdf_url}" target="_blank" rel="noopener">&#128196; PDF</a>`
+    : '';
+
+  const labelHtml = (c.labels || []).map(l =>
+    `<span class="label-chip" style="background:${esc(l.color)};margin-bottom:3px">
+       <span class="label-chip-dot"></span>
+       <span class="label-chip-name">${esc(l.name)}</span>
+     </span>`).join('');
+
+  document.getElementById('panel-header').innerHTML = `
+    ${photo}
+    <div class="panel-title">
+      <h2>${esc(c.name)}</h2>
+      <div class="meta">
+        ${c.birth_year ? 'Born ' + c.birth_year : ''}
+        ${c.age ? ' · ' + c.age + ' yrs' : ''}
+        ${c.height && c.height !== 'Not Mentioned' ? ' · ' + esc(c.height) : ''}
+        ${c.gender && c.gender !== 'Not Mentioned' ? ' · ' + esc(c.gender) : ''}
+      </div>
+      <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;" id="panel-labels">${labelHtml}</div>
+      <div class="panel-actions">
+        ${IS_ADMIN ? `<a class="panel-btn" href="/admin/candidate/${c.id}/edit">&#9998; Edit</a>` : ''}
+        ${IS_ADMIN || c.created_by_user_id === CURRENT_USER_ID
+          ? `<button class="panel-btn" onclick="triggerPhotoUpload(event,'${esc(c.folder_stem || '')}',${c.id})">&#128247; Photo</button>
+             <input type="file" id="upinput-panel-${c.id}" accept="image/*" style="display:none"
+               onchange="handlePhotoUpload(event,'${esc(c.folder_stem || '')}',${c.id})">`
+          : ''}
+        ${pdfBtnAction}
+        ${ALL_VIEWS.length ? `
+        <div class="panel-atv-wrap" id="panel-atv-wrap-${c.id}">
+          <button class="panel-btn" onclick="togglePanelAtvPopup(event,${c.id})">&#43; View</button>
+        </div>` : ''}
+      </div>
+    </div>
+    <button class="panel-close" onclick="closePanel()">&#10005;</button>`;
+
+  document.getElementById('panel-body').innerHTML = `
+    <div class="panel-section">
+      <div class="panel-section-title">Personal</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">Date of Birth</div>${nm(c.date_of_birth)}</div>
+        <div class="detail-item"><div class="detail-label">Height</div>${nm(c.height)}</div>
+        <div class="detail-item"><div class="detail-label">Weight</div>${nm(c.weight)}</div>
+        <div class="detail-item"><div class="detail-label">Gender</div>${nm(c.gender)}</div>
+        <div class="detail-item"><div class="detail-label">Marital Status</div>${nm(c.marital_status)}</div>
+        <div class="detail-item"><div class="detail-label">Blood Group</div>${nm(c.blood_group)}</div>
+        <div class="detail-item"><div class="detail-label">Mother Tongue</div>${nm(c.mother_tongue)}</div>
+        <div class="detail-item"><div class="detail-label">Family City</div>${nm(c.residential_city)}</div>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">Caste &amp; Religion</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">Caste</div>${nm(c.caste)}</div>
+        <div class="detail-item"><div class="detail-label">Sub-caste</div>${nm(c.sub_caste)}</div>
+        <div class="detail-item"><div class="detail-label">Gotra</div>${nm(c.gotra)}</div>
+        <div class="detail-item"><div class="detail-label">Manglik</div>${nm(c.manglik)}</div>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">Education &amp; Career</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">Education</div>${nm(c.education)}</div>
+        <div class="detail-item"><div class="detail-label">Occupation</div>${nm(c.occupation)}</div>
+        <div class="detail-item"><div class="detail-label">Current Location</div>${nm(c.job_location)}</div>
+        <div class="detail-item"><div class="detail-label">Annual Salary</div>${nm(c.salary)}</div>
+        <div class="detail-item"><div class="detail-label">Candidate Contact</div>${nm(c.candidate_contact)}</div>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">Family</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">Father's Name</div>${nm(c.fathers_name)}</div>
+        <div class="detail-item"><div class="detail-label">Father's Contact</div>${nm(c.fathers_contact)}</div>
+        <div class="detail-item"><div class="detail-label">Father's Occupation</div>${nm(c.fathers_occupation)}</div>
+        <div class="detail-item"><div class="detail-label">Mother's Name</div>${nm(c.mothers_name)}</div>
+        <div class="detail-item"><div class="detail-label">Mother's Contact</div>${nm(c.mothers_contact)}</div>
+        <div class="detail-item"><div class="detail-label">Mother's Occupation</div>${nm(c.mothers_occupation)}</div>
+        <div class="detail-item"><div class="detail-label">Siblings</div>${nm(c.siblings)}</div>
+      </div>
+    </div>
+    ${c.hobbies ? `<div class="panel-section"><div class="panel-section-title">Hobbies</div><div style="font-size:0.82rem;font-weight:500">${esc(c.hobbies)}</div></div>` : ''}
+    ${c.about_me ? `<div class="panel-section"><div class="panel-section-title">About</div><div style="font-size:0.82rem;line-height:1.6">${esc(c.about_me)}</div></div>` : ''}`;
+
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('panel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function refreshPanelLabels(labels) {
+  const container = document.getElementById('panel-labels');
+  if (!container) return;
+  container.innerHTML = labels.map(l =>
+    `<span class="label-chip" style="background:${esc(l.color)};margin-bottom:3px">
+       <span class="label-chip-dot"></span>
+       <span class="label-chip-name">${esc(l.name)}</span>
+     </span>`).join('');
+}
+
+function closePanel() {
+  panelCid = null;
+  _closeAtvPopup();
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('panel').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closePanel(); closeAllDropdowns(); } });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Save View modal
+// ═══════════════════════════════════════════════════════════════════════════
+function openSaveViewModal() {
+  const params    = getFilters();
+  const autoName  = buildAutoName(params);
+  const input     = document.getElementById('save-view-name');
+  input.value     = autoName;
+  document.getElementById('save-modal').classList.add('open');
+  setTimeout(() => { input.focus(); input.select(); }, 50);
+}
+
+function closeSaveViewModal() {
+  document.getElementById('save-modal').classList.remove('open');
+}
+
+function buildAutoName(params) {
+  const parts = [];
+  const gender = params.get('gender');
+  if (gender) parts.push(gender);
+  const caste = params.get('caste');
+  if (caste) parts.push(caste);
+  const resCity = params.get('residential_city');
+  if (resCity) parts.push(resCity);
+  const jobLoc = params.get('job_location');
+  if (jobLoc) parts.push(jobLoc);
+  const hMin = params.get('height_min');
+  const hMax = params.get('height_max');
+  if (hMin || hMax)  parts.push(inchesToFt(hMin) + (hMax ? '–' + inchesToFt(hMax) : '+'));
+  const yFrom = params.get('birth_year_from');
+  const yTo   = params.get('birth_year_to');
+  if (yFrom || yTo) parts.push((yFrom || '?') + '–' + (yTo || '?'));
+  const wMax = params.get('weight_max');
+  if (wMax) parts.push('<' + wMax + 'kg');
+  const now = new Date();
+  parts.push(now.toLocaleString('en-US', {month:'short', year:'numeric'}));
+  return parts.join(' · ');
+}
+
+function inchesToFt(inches) {
+  if (!inches) return '';
+  const i = parseInt(inches);
+  return Math.floor(i/12) + "'" + (i%12) + '"';
+}
+
+async function confirmSaveView() {
+  const name = document.getElementById('save-view-name').value.trim();
+  if (!name) { showToast('Please enter a view name'); return; }
+  if (selected.size === 0) { showToast('No candidates selected'); return; }
+
+  const params    = getFilters();
+  const filterDesc = buildAutoName(params);
+
+  try {
+    const res  = await fetch('/api/views', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        name,
+        candidate_ids: [...selected],
+        filter_desc: filterDesc,
+      }),
+    });
+    const view = await res.json();
+    if (res.ok) {
+      ALL_VIEWS.unshift(view);
+      renderViewsDropdown();
+      closeSaveViewModal();
+      clearSelection();
+      showToast(`View "${name}" saved with ${view.count || selected.size} candidates`);
+    } else {
+      showToast('Error: ' + (view.error || 'Unknown error'));
+    }
+  } catch(err) { showToast('Network error'); }
+}
+
+document.getElementById('save-view-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmSaveView();
+  if (e.key === 'Escape') closeSaveViewModal();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// Add to existing view
+// ═══════════════════════════════════════════════════════════════════════════
+function toggleAddViewPopup(event) {
+  event.stopPropagation();
+  const popup = document.getElementById('add-view-popup');
+  const isOpen = popup.classList.contains('open');
+  popup.classList.toggle('open', !isOpen);
+  if (!isOpen) {
+    // Populate options from ALL_VIEWS
+    const container = document.getElementById('add-view-options');
+    if (!ALL_VIEWS.length) {
+      container.innerHTML = '<div class="add-view-empty">No saved views yet</div>';
+    } else {
+      container.innerHTML = ALL_VIEWS.map(v =>
+        `<div class="add-view-option" onclick="addSelectionToView(event,${v.id},'${esc(v.name)}')">
+           <span>${esc(v.name)}</span>
+           <span class="add-view-option-count">${v.count || 0}</span>
+         </div>`
+      ).join('');
+    }
+  }
+}
+
+// ── Panel "Add to view" (single candidate from detail panel) ─────────────
+
+// ── Panel "Add to view" — single floating popup appended to <body> ────────
+let _panelViewMembership = {};  // viewId -> bool
+let _atvCurrentCid = null;      // candidate the popup is open for
+
+function _getAtvPopup() {
+  let el = document.getElementById('_panel-atv-global');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '_panel-atv-global';
+    el.className = 'panel-atv-popup';
+    el.innerHTML = '<div class="panel-atv-header">Add to view</div><div id="_panel-atv-list"></div>';
+    el.addEventListener('click', e => e.stopPropagation());
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+function _closeAtvPopup() {
+  const el = document.getElementById('_panel-atv-global');
+  if (el) el.classList.remove('open');
+  _atvCurrentCid = null;
+}
+
+async function togglePanelAtvPopup(event, cid) {
+  event.stopPropagation();
+  const popup = _getAtvPopup();
+  const isOpen = popup.classList.contains('open') && _atvCurrentCid === cid;
+  _closeAtvPopup();
+  if (isOpen) return;
+
+  // Position the popup at the button (fixed, escaping panel overflow)
+  const btn = event.currentTarget;
+  const rect = btn.getBoundingClientRect();
+  const viewH = window.innerHeight;
+  const popupH = 220;
+  const top = (rect.bottom + popupH > viewH) ? Math.max(0, rect.top - popupH) : (rect.bottom + 5);
+  popup.style.left  = rect.left + 'px';
+  popup.style.top   = top + 'px';
+  popup.style.right = 'auto';
+
+  _atvCurrentCid = cid;
+  popup.classList.add('open');
+  const list = document.getElementById('_panel-atv-list');
+  list.innerHTML = '<div class="panel-atv-empty">Loading…</div>';
+
+  // Check membership for all views in one batch
+  try {
+    const res  = await fetch(`/api/candidate/${cid}/views`);
+    const data = await res.json();
+    _panelViewMembership = {};
+    (data.view_ids || []).forEach(id => { _panelViewMembership[id] = true; });
+  } catch(e) { _panelViewMembership = {}; }
+
+  // Check popup is still open for the same candidate (user may have closed it)
+  if (_atvCurrentCid !== cid) return;
+
+  if (!ALL_VIEWS.length) {
+    list.innerHTML = '<div class="panel-atv-empty">No saved views yet</div>';
+    return;
+  }
+
+  list.innerHTML = ALL_VIEWS.map(v => {
+    const inView = !!_panelViewMembership[v.id];
+    return `<div class="panel-atv-item${inView ? ' already' : ''}"
+                 onclick="${inView ? '' : `panelAddToView(event,${cid},${v.id},'${esc(v.name)}')`}">
+      <span>${esc(v.name)}</span>
+      <span class="panel-atv-badge ${inView ? 'in' : 'notIn'}" id="panel-atv-badge-${v.id}-${cid}">
+        ${inView ? '✓ In view' : '+ Add'}
+      </span>
+    </div>`;
+  }).join('');
+}
+
+async function panelAddToView(event, cid, viewId, viewName) {
+  event.stopPropagation();
+  const badge = document.getElementById(`panel-atv-badge-${viewId}-${cid}`);
+  const item  = badge?.closest('.panel-atv-item');
+  if (!badge || item?.classList.contains('already')) return;
+
+  // Optimistic UI
+  badge.textContent = '…';
+
+  try {
+    const res  = await fetch(`/api/views/${viewId}/candidates`, {
+      method:  'POST',
+      headers: {'Content-Type':'application/json'},
+      body:    JSON.stringify({ candidate_ids: [cid] }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      if (data.already_in > 0) {
+        // Race: someone added it between the check and now
+        badge.textContent = '✓ In view';
+        badge.className   = 'panel-atv-badge in';
+        item.classList.add('already');
+        item.onclick = null;
+        showToast(`Already in "${viewName}"`);
+      } else {
+        badge.textContent = '✓ In view';
+        badge.className   = 'panel-atv-badge in';
+        item.classList.add('already');
+        item.onclick = null;
+        _panelViewMembership[viewId] = true;
+        // Update view count in views dropdown
+        const v = ALL_VIEWS.find(v => v.id === viewId);
+        if (v) v.count = data.total;
+        renderViewsDropdown();
+        showToast(`Added to "${viewName}"`);
+      }
+    } else {
+      badge.textContent = '+ Add';
+      showToast('Error: ' + (data.error || 'unknown'));
+    }
+  } catch(err) {
+    badge.textContent = '+ Add';
+    showToast('Network error');
+  }
+}
+
+// Close panel atv popup when clicking outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('#_panel-atv-global') && !e.target.closest('.panel-atv-wrap')) {
+    _closeAtvPopup();
+  }
+});
+
+async function addSelectionToView(event, viewId, viewName) {
+  event.stopPropagation();
+  document.getElementById('add-view-popup').classList.remove('open');
+  if (selected.size === 0) return;
+  try {
+    const res  = await fetch(`/api/views/${viewId}/candidates`, {
+      method:  'POST',
+      headers: {'Content-Type':'application/json'},
+      body:    JSON.stringify({ candidate_ids: [...selected] }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      // Update local view count
+      const v = ALL_VIEWS.find(v => v.id === viewId);
+      if (v) v.count = data.total;
+      renderViewsDropdown();
+      // Show specific message depending on outcome
+      if (data.added > 0 && data.already_in > 0) {
+        showToast(`Added ${data.added} to "${viewName}" · ${data.already_in} already in view`);
+      } else if (data.added > 0) {
+        showToast(`Added ${data.added} to "${viewName}"`);
+      } else {
+        showToast(`Already in "${viewName}" — nothing new to add`);
+      }
+    } else {
+      showToast('Error: ' + (data.error || 'unknown'));
+    }
+  } catch(err) { showToast('Network error'); }
+}
+
+// Close add-view popup when clicking outside
+document.addEventListener('click', () => {
+  document.getElementById('add-view-popup')?.classList.remove('open');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Views dropdown
+// ═══════════════════════════════════════════════════════════════════════════
+function toggleViewsDropdown(event) {
+  event.stopPropagation();
+  document.getElementById('views-dropdown').classList.toggle('open');
+}
+
+function renderViewsDropdown() {
+  const list = document.getElementById('views-list');
+  const badge = document.getElementById('views-count-badge');
+  badge.textContent = ALL_VIEWS.length ? '(' + ALL_VIEWS.length + ')' : '';
+
+  if (!ALL_VIEWS.length) {
+    list.innerHTML = '<div class="views-dropdown-empty">No saved views yet</div>';
+    return;
+  }
+  list.innerHTML = ALL_VIEWS.map(v => `
+    <div class="view-item" id="vitem-${v.id}">
+      <span class="view-item-name" id="vname-${v.id}" onclick="window.location='/view/${v.id}'">${esc(v.name)}</span>
+      <span class="view-item-count">${v.count || 0}</span>
+      <div class="view-item-actions">
+        <button class="view-action-btn" title="Rename" onclick="startRenameView(event,${v.id})">&#9998;</button>
+        <button class="view-action-btn del" title="Delete" onclick="deleteView(event,${v.id})">&#10005;</button>
+      </div>
+    </div>`).join('');
+}
+
+function startRenameView(event, viewId) {
+  event.stopPropagation();
+  const nameSpan = document.getElementById('vname-' + viewId);
+  if (!nameSpan) return;
+  const current = nameSpan.textContent;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'view-rename-input';
+  input.value = current;
+  nameSpan.replaceWith(input);
+  input.focus(); input.select();
+
+  async function commit() {
+    const name = input.value.trim();
+    if (name && name !== current) {
+      try {
+        await fetch('/api/views/' + viewId, {
+          method: 'PUT',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({name}),
+        });
+        const v = ALL_VIEWS.find(x => x.id === viewId);
+        if (v) v.name = name;
+        renderViewsDropdown();
+        showToast('View renamed');
+      } catch(err) {}
+    } else {
+      renderViewsDropdown();
+    }
+  }
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { renderViewsDropdown(); }
+  });
+}
+
+async function deleteView(event, viewId) {
+  event.stopPropagation();
+  if (!confirm('Delete this saved view?')) return;
+  try {
+    await fetch('/api/views/' + viewId, { method: 'DELETE' });
+    ALL_VIEWS = ALL_VIEWS.filter(v => v.id !== viewId);
+    renderViewsDropdown();
+    showToast('View deleted');
+    // If currently on this view's page, go home
+    if (window.location.pathname === '/view/' + viewId) {
+      window.location.href = '/';
+    }
+  } catch(err) {}
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Label filter dropdown
+// ═══════════════════════════════════════════════════════════════════════════
+function toggleLabelFilter(event) {
+  event.stopPropagation();
+  document.getElementById('label-filter-dropdown').classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Close all open dropdowns
+// ═══════════════════════════════════════════════════════════════════════════
+function closeAllDropdowns(exceptId) {
+  document.querySelectorAll('.label-dropdown.open, .views-dropdown.open, .label-filter-dropdown.open')
+    .forEach(el => { if (el.id !== exceptId) el.classList.remove('open'); });
+}
+document.addEventListener('click', () => closeAllDropdowns());
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Label delete confirmation popup
+// ═══════════════════════════════════════════════════════════════════════════
+function confirmDeleteLabel(event, labelId, labelName) {
+  event.stopPropagation();
+  // Close the dropdown so the popup is the only focus
+  closeAllDropdowns();
+
+  const existing = document.getElementById('_ldel-popup');
+  if (existing) existing.remove();
+
+  const popup = document.createElement('div');
+  popup.className = 'ldel-confirm';
+  popup.id = '_ldel-popup';
+  popup.innerHTML = `
+    <div class="ldel-confirm-box">
+      <h4>Delete label?</h4>
+      <p>Are you sure you want to delete <strong>${esc(labelName)}</strong>?<br>It will be removed from all candidates.</p>
+      <div class="ldel-confirm-actions">
+        <button class="ldel-btn-cancel" onclick="document.getElementById('_ldel-popup').remove()">Cancel</button>
+        <button class="ldel-btn-delete" onclick="_deleteLabelById(${labelId},'${esc(labelName)}')">Delete</button>
+      </div>
+    </div>`;
+  // Clicking backdrop cancels
+  popup.addEventListener('click', e => { if (e.target === popup) popup.remove(); });
+  document.body.appendChild(popup);
+}
+
+async function _deleteLabelById(labelId, labelName) {
+  const popup = document.getElementById('_ldel-popup');
+  if (popup) popup.remove();
+
+  try {
+    const res = await fetch('/api/labels/' + labelId, { method: 'DELETE' });
+    if (!res.ok) { showToast('Error deleting label'); return; }
+
+    // Remove from global list
+    const idx = ALL_LABELS.findIndex(l => l.id === labelId);
+    if (idx !== -1) ALL_LABELS.splice(idx, 1);
+
+    // Remove this label chip from every card that has it
+    cardData.forEach((c, cid) => {
+      if (c.labels && c.labels.some(l => l.id === labelId)) {
+        c.labels = c.labels.filter(l => l.id !== labelId);
+        updateCardLabels(cid, c.labels);
+      }
+    });
+
+    // Also remove from the label filter bar checkbox list if present
+    const filterItem = document.querySelector(`.label-filter-option[data-id="${labelId}"]`);
+    if (filterItem) filterItem.remove();
+    // If it was an active filter, remove it from selectedLabels and re-fetch
+    if (selectedLabels.has(labelId)) {
+      selectedLabels.delete(labelId);
+      applyFilters();
+    }
+
+    // Rebuild all open dropdown lists
+    _rebuildAllDropdownLists();
+
+    showToast(`Label "${labelName}" deleted`);
+  } catch(err) { showToast('Network error'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Toast
+// ═══════════════════════════════════════════════════════════════════════════
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Utility
+// ═══════════════════════════════════════════════════════════════════════════
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function nm(v) {
+  if (!v || v === 'Not Mentioned') return '<span class="detail-value nm">Not mentioned</span>';
+  return '<span class="detail-value">' + esc(v) + '</span>';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Photo upload
+// ═══════════════════════════════════════════════════════════════════════════
+function triggerPhotoUpload(event, stem, cid) {
+  event.stopPropagation();
+  // Check panel input first (if panel is open), then card input
+  const input = document.getElementById('upinput-panel-' + cid)
+             || document.getElementById('upinput-' + cid);
+  if (input) input.click();
+}
+
+async function handlePhotoUpload(event, stem, cid) {
+  event.stopPropagation();
+  const input = event.target;
+  const file  = input.files[0];
+  if (!file) return;
+
+  const btn = document.querySelector(`button.panel-btn[onclick*="triggerPhotoUpload"][onclick*="${cid}"]`);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+
+  const formData = new FormData();
+  formData.append('photo', file);
+
+  try {
+    const res  = await fetch(`/candidate/${encodeURIComponent(stem)}/photo`, {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      // Bust the browser cache and replace the photo on the card
+      const ts    = Date.now();
+      const newUrl = `/candidate/${encodeURIComponent(stem)}/photo?t=${ts}`;
+
+      // Update card photo
+      const card = document.getElementById('card-' + cid);
+      if (card) {
+        const img = card.querySelector('.card-photo');
+        if (img) {
+          img.src = newUrl;
+        } else {
+          // Was a placeholder — replace with img
+          const ph = card.querySelector('.card-photo-placeholder');
+          if (ph) {
+            const newImg = document.createElement('img');
+            newImg.className = 'card-photo';
+            newImg.src = newUrl;
+            newImg.alt = '';
+            newImg.loading = 'lazy';
+            ph.replaceWith(newImg);
+          }
+        }
+      }
+
+      // Update panel photo if this candidate is currently open
+      if (panelCid === cid) {
+        const panelImg = document.querySelector('.panel-photo');
+        if (panelImg) {
+          panelImg.src = newUrl;
+        } else {
+          const ph = document.querySelector('.panel-photo-ph');
+          if (ph) {
+            const newImg = document.createElement('img');
+            newImg.className = 'panel-photo';
+            newImg.src = newUrl;
+            newImg.alt = '';
+            ph.replaceWith(newImg);
+          }
+        }
+      }
+
+      // Update in-memory data
+      const c = cardData.get(cid);
+      if (c) c.photo_url = newUrl;
+
+      showToast('Photo updated');
+    } else {
+      showToast('Upload failed: ' + (data.error || 'Unknown error'));
+    }
+  } catch (err) {
+    showToast('Upload error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📷 Photo'; }
+    input.value = ''; // reset so same file can be re-selected
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Init
+// ═══════════════════════════════════════════════════════════════════════════
+renderViewsDropdown();
+resetAndLoad();
+
+// ── Populate caste datalist for typeahead suggestions ──────────────────────
+(async () => {
+  try {
+    const res  = await fetch('/api/filter-options/caste');
+    if (!res.ok) return;
+    const data = await res.json();
+    const dl   = document.getElementById('caste-suggestions');
+    if (!dl) return;
+    data.values.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v;
+      dl.appendChild(opt);
+    });
+  } catch(e) {}
+})();
+</script>
+</body>
+</html>
